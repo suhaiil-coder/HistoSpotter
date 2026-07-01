@@ -1,0 +1,50 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "JoacGhzjmjtPCymUXhmR_"
+uri = "file://artifacts/mobile/assets/images/icon.png"
+type = "image"
+title = "histospotter app icon"
+
+[[generated]]
+id = "0vzijO0hLElEsbLib0S8U"
+uri = "file://artifacts/mobile/assets/images/histo_epithelial.png"
+type = "image"
+title = "epithelial histology slide"
+
+[[generated]]
+id = "NUXmOm7TUYgWafA7Bn_xj"
+uri = "file://artifacts/mobile/assets/images/histo_muscle.png"
+type = "image"
+title = "muscle histology slide"
+
+[[generated]]
+id = "_CNh5148E5fFTUPVhtzo6"
+uri = "file://artifacts/mobile/assets/images/histo_kidney.png"
+type = "image"
+title = "kidney histology slide"
+
+[[generated]]
+id = "Y39nS1TTevHiWM6awC3pO"
+uri = "file://artifacts/mobile/assets/images/histo_nerve.png"
+type = "image"
+title = "nerve histology slide"
+
+[[generated]]
+id = "c3uX8B5iPexmyxIYLenn4"
+uri = "file://artifacts/mobile/assets/images/histo_liver.png"
+type = "image"
+title = "liver histology slide"
+
+[[generated]]
+id = "mb3aJmgv75jktT5C2EEPl"
+uri = "file://artifacts/mobile/assets/images/histo_lung.png"
+type = "image"
+title = "lung histology slide"
+
+[[generated]]
+id = "e4xqxLs_hNYLqhwoNhJLM"
+uri = "file://artifacts/mobile/assets/images/histo_skin.png"
+type = "image"
+title = "skin histology slide"
