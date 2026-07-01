@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "JoacGhzjmjtPCymUXhmR_"
@@ -48,3 +47,9 @@ id = "e4xqxLs_hNYLqhwoNhJLM"
 uri = "file://artifacts/mobile/assets/images/histo_skin.png"
 type = "image"
 title = "skin histology slide"
+
+[[outputs]]
+id = "94NV8f3RBIIbXEYx6N3Bm"
+uri = "file://artifacts/mobile/assets/images/trophy.png"
+type = "image"
+title = "Cropped Golden Cup"
