@@ -16,6 +16,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "brain.head.profile", selected: "brain.head.profile" }} />
         <Label>Quiz</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="spotter">
+        <Icon sf={{ default: "eye", selected: "eye.fill" }} />
+        <Label>Spotter</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="bookmarks">
         <Icon sf={{ default: "bookmark", selected: "bookmark.fill" }} />
         <Label>Saved</Label>
@@ -77,6 +81,18 @@ function ClassicTabLayout() {
               <SymbolView name="brain.head.profile" tintColor={color} size={size} />
             ) : (
               <Feather name="zap" size={size} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="spotter"
+        options={{
+          title: "Spotter",
+          tabBarIcon: ({ color, size }) =>
+            isIOS ? (
+              <SymbolView name="eye" tintColor={color} size={size} />
+            ) : (
+              <Feather name="eye" size={size} color={color} />
             ),
         }}
       />
