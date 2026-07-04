@@ -1,6 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
   Platform,
   Pressable,
@@ -10,15 +10,18 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
 
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 import { CATEGORIES } from "@/constants/questions";
+import DrawerMenu from "@/components/DrawerMenu";
 
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { stats, settings, quizHistory } = useApp();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const lastQuiz = quizHistory[0];
   const accuracy =
@@ -42,12 +45,27 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.appTitle, { color: colors.foreground }]}>
-            Histo<Text style={{ color: colors.primary }}>Spotter</Text>
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-            Histology Quiz App
-          </Text>
+          {/* Hamburger */}
+          <Pressable
+            onPress={() => setDrawerOpen(true)}
+            style={({ pressed }) => [
+              styles.menuBtn,
+              { backgroundColor: colors.card, borderColor: colors.border },
+              pressed && { opacity: 0.7 },
+            ]}
+            hitSlop={8}
+          >
+            <Feather name="menu" size={20} color={colors.foreground} />
+          </Pressable>
+
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.appTitle, { color: colors.foreground }]}>
+              Histo<Text style={{ color: colors.primary }}>Spotter</Text>
+            </Text>
+            <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+              Histology Quiz App
+            </Text>
+          </View>
         </View>
 
         {/* Last Quiz Card */}
@@ -171,6 +189,16 @@ export default function HomeScreen() {
           </LinearGradient>
         </Pressable>
       </View>
+
+      {/* Slide-out drawer — rendered last so it sits on top */}
+      <DrawerMenu
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onSelect={(id) => {
+          // Future: navigate to the selected section
+          console.log("Selected section:", id);
+        }}
+      />
     </View>
   );
 }
@@ -178,7 +206,22 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: 20 },
-  header: { marginBottom: 20 },
+
+  header: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    marginBottom: 20,
+  },
+  menuBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+  },
   appTitle: {
     fontFamily: "Inter_700Bold",
     fontSize: 32,
@@ -189,6 +232,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 2,
   },
+
   card: {
     borderRadius: 16,
     padding: 16,
