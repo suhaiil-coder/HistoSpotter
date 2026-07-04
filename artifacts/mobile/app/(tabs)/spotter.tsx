@@ -1,7 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Platform,
@@ -19,6 +19,7 @@ import { useColors } from "@/hooks/useColors";
 import { ALL_SLIDES, SLIDE_CATEGORIES, slideImageMap, type Slide } from "@/constants/slides";
 
 type SessionState = "idle" | "spotting" | "done";
+type TimerDuration = 0 | 30 | 60;
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -44,6 +45,62 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Special Senses": "#FBBF24",
 };
 
+const TIMER_OPTIONS: { label: string; value: TimerDuration }[] = [
+  { label: "Off", value: 0 },
+  { label: "30s", value: 30 },
+  { label: "1 min", value: 60 },
+];
+
+// Compact circular countdown ring drawn with border arcs
+function TimerRing({
+  timeLeft,
+  total,
+  colors: c,
+}: {
+  timeLeft: number;
+  total: number;
+  colors: ReturnType<typeof import("@/hooks/useColors").useColors>;
+}) {
+  const SIZE = 38;
+  const fraction = total > 0 ? timeLeft / total : 0;
+  const urgent = timeLeft <= 5;
+  const warning = timeLeft <= 10;
+  const ringColor = urgent ? "#EF4444" : warning ? "#F97316" : c.primary;
+
+  // Animate the color via opacity layers
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (urgent && timeLeft > 0) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 0.3, duration: 400, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      pulseAnim.stopAnimation();
+      pulseAnim.setValue(1);
+    }
+  }, [urgent, timeLeft]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.timerRing,
+        {
+          width: SIZE,
+          height: SIZE,
+          borderRadius: SIZE / 2,
+          borderColor: ringColor,
+          opacity: pulseAnim,
+        },
+      ]}
+    >
+      <Text style={[styles.timerTxt, { color: ringColor }]}>{timeLeft}</Text>
+    </Animated.View>
+  );
+}
+
 export default function SpotterScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -51,7 +108,11 @@ export default function SpotterScreen() {
   const topInset = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomInset = insets.bottom || 16;
 
+  // ── Idle settings ──────────────────────────────────────────────────────
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [timerDuration, setTimerDuration] = useState<TimerDuration>(0);
+
+  // ── Session state ──────────────────────────────────────────────────────
   const [sessionState, setSessionState] = useState<SessionState>("idle");
   const [deck, setDeck] = useState<Slide[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -60,9 +121,23 @@ export default function SpotterScreen() {
   const [missed, setMissed] = useState(0);
   const [missedSlides, setMissedSlides] = useState<Slide[]>([]);
 
+  // ── Timer ──────────────────────────────────────────────────────────────
+  const [timeLeft, setTimeLeft] = useState<number>(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeTimerDuration = useRef<TimerDuration>(0);
+
+  const clearTimer = useCallback(() => {
+    if (intervalRef.current !== null) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  // ── Animations ─────────────────────────────────────────────────────────
   const revealAnim = useRef(new Animated.Value(0)).current;
   const cardAnim = useRef(new Animated.Value(0)).current;
 
+  // ── Derived ───────────────────────────────────────────────────────────
   const filteredSlides = useMemo(
     () =>
       selectedCategory === "All"
@@ -71,7 +146,45 @@ export default function SpotterScreen() {
     [selectedCategory]
   );
 
+  // ── Reveal helper (stable ref so timer callback can call it) ──────────
+  const doReveal = useCallback(() => {
+    clearTimer();
+    setRevealed(true);
+    Animated.spring(revealAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 60,
+      friction: 8,
+    }).start();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, [clearTimer, revealAnim]);
+
+  const doRevealRef = useRef(doReveal);
+  useEffect(() => { doRevealRef.current = doReveal; }, [doReveal]);
+
+  // ── Start timer for current slide ─────────────────────────────────────
+  const startTimer = useCallback((duration: TimerDuration) => {
+    clearTimer();
+    if (duration === 0) return;
+    setTimeLeft(duration);
+    intervalRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(intervalRef.current!);
+          intervalRef.current = null;
+          // Auto-reveal when time runs out
+          doRevealRef.current();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [clearTimer]);
+
+  // ── Session control ───────────────────────────────────────────────────
   const startSession = useCallback(() => {
+    clearTimer();
+    activeTimerDuration.current = timerDuration;
     const shuffled = shuffle(filteredSlides);
     setDeck(shuffled);
     setCurrentIndex(0);
@@ -82,21 +195,19 @@ export default function SpotterScreen() {
     revealAnim.setValue(0);
     cardAnim.setValue(0);
     setSessionState("spotting");
-  }, [filteredSlides]);
+  }, [filteredSlides, timerDuration, clearTimer]);
 
-  const revealAnswer = useCallback(() => {
-    setRevealed(true);
-    Animated.spring(revealAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      tension: 60,
-      friction: 8,
-    }).start();
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }, [revealAnim]);
+  // Start timer whenever a new slide index appears during spotting
+  useEffect(() => {
+    if (sessionState === "spotting") {
+      startTimer(activeTimerDuration.current);
+    }
+    return clearTimer;
+  }, [currentIndex, sessionState]);
 
   const advance = useCallback(
     (gotIt: boolean) => {
+      clearTimer();
       const slide = deck[currentIndex];
       if (gotIt) {
         setCorrect((c) => c + 1);
@@ -124,14 +235,16 @@ export default function SpotterScreen() {
         setCurrentIndex(next);
       });
     },
-    [currentIndex, deck, cardAnim, revealAnim]
+    [currentIndex, deck, cardAnim, revealAnim, clearTimer]
   );
 
   const restartMissed = useCallback(() => {
+    clearTimer();
     if (missedSlides.length === 0) {
       setSessionState("idle");
       return;
     }
+    activeTimerDuration.current = timerDuration;
     setDeck(shuffle(missedSlides));
     setCurrentIndex(0);
     setRevealed(false);
@@ -141,7 +254,10 @@ export default function SpotterScreen() {
     revealAnim.setValue(0);
     cardAnim.setValue(0);
     setSessionState("spotting");
-  }, [missedSlides]);
+  }, [missedSlides, timerDuration, clearTimer]);
+
+  // Clean up on unmount
+  useEffect(() => () => clearTimer(), []);
 
   const currentSlide = deck[currentIndex];
   const total = deck.length;
@@ -164,7 +280,6 @@ export default function SpotterScreen() {
   // ── DONE SCREEN ────────────────────────────────────────────────────────
   if (sessionState === "done") {
     const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
-    const passFail = pct >= 70;
     return (
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
@@ -177,7 +292,7 @@ export default function SpotterScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={{ alignItems: "center", gap: 6 }}>
-          <Text style={[styles.donePct, { color: passFail ? colors.success : colors.destructive }]}>
+          <Text style={[styles.donePct, { color: pct >= 70 ? colors.success : colors.destructive }]}>
             {pct}%
           </Text>
           <Text style={[styles.doneLabel, { color: colors.foreground }]}>
@@ -236,28 +351,19 @@ export default function SpotterScreen() {
   // ── SPOTTING SCREEN ────────────────────────────────────────────────────
   if (sessionState === "spotting" && currentSlide) {
     const catColor = CATEGORY_COLORS[currentSlide.category] ?? colors.primary;
-    // Fixed image card height — leaves room for topBar (~80px) and bottom (~180px)
-    const cardHeight = screenHeight - topInset - 80 - (revealed ? 230 : 80) - bottomInset;
+    const cardHeight = screenHeight - topInset - 88 - (revealed ? 230 : 80) - bottomInset;
 
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Top bar */}
         <View style={[styles.spotTopBar, { paddingTop: topInset + 8 }]}>
-          <Pressable onPress={() => setSessionState("idle")} style={styles.spotBack}>
+          <Pressable onPress={() => { clearTimer(); setSessionState("idle"); }} style={styles.spotBack}>
             <Feather name="x" size={20} color={colors.mutedForeground} />
           </Pressable>
 
           <View style={{ flex: 1, gap: 4 }}>
             <View style={[styles.spotTrack, { backgroundColor: colors.secondary }]}>
-              <View
-                style={[
-                  styles.spotFill,
-                  {
-                    backgroundColor: colors.primary,
-                    flex: progressFlex,
-                  },
-                ]}
-              />
+              <View style={[styles.spotFill, { backgroundColor: colors.primary, flex: progressFlex }]} />
               <View style={{ flex: 1 - progressFlex }} />
             </View>
             <Text style={[styles.spotCount, { color: colors.mutedForeground }]}>
@@ -265,22 +371,24 @@ export default function SpotterScreen() {
             </Text>
           </View>
 
+          {/* Score */}
           <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
             <Text style={[styles.scoreNum, { color: colors.success }]}>{correct}</Text>
             <Text style={[styles.scoreSep, { color: colors.mutedForeground }]}>/</Text>
             <Text style={[styles.scoreNum, { color: colors.destructive }]}>{missed}</Text>
           </View>
+
+          {/* Timer ring — only shown when timer is active and not revealed */}
+          {activeTimerDuration.current > 0 && !revealed && (
+            <TimerRing timeLeft={timeLeft} total={activeTimerDuration.current} colors={colors} />
+          )}
         </View>
 
         {/* Slide image */}
         <Animated.View
           style={[
             styles.spotCard,
-            {
-              height: cardHeight,
-              opacity: cardOpacity,
-              transform: [{ translateX: cardTranslateX }],
-            },
+            { height: cardHeight, opacity: cardOpacity, transform: [{ translateX: cardTranslateX }] },
           ]}
         >
           <Image
@@ -293,10 +401,7 @@ export default function SpotterScreen() {
         {/* Bottom */}
         <View style={[styles.spotBottom, { paddingBottom: bottomInset + 12 }]}>
           {!revealed ? (
-            <Pressable
-              style={[styles.revealBtn, { backgroundColor: colors.primary }]}
-              onPress={revealAnswer}
-            >
+            <Pressable style={[styles.revealBtn, { backgroundColor: colors.primary }]} onPress={doReveal}>
               <Feather name="eye" size={18} color="#fff" style={{ marginRight: 10 }} />
               <Text style={styles.revealTxt}>Reveal Answer</Text>
             </Pressable>
@@ -316,9 +421,7 @@ export default function SpotterScreen() {
                 <View style={[styles.catDot, { backgroundColor: catColor }]} />
                 <Text style={[styles.catTxt, { color: catColor }]}>{currentSlide.category}</Text>
               </View>
-              <Text style={[styles.answerName, { color: colors.foreground }]}>
-                {currentSlide.name}
-              </Text>
+              <Text style={[styles.answerName, { color: colors.foreground }]}>{currentSlide.name}</Text>
               <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
                 <Pressable
                   style={[styles.voteBtn, { backgroundColor: "#EF444420", borderColor: "#EF4444" }]}
@@ -374,15 +477,11 @@ export default function SpotterScreen() {
         <View style={styles.catGrid}>
           {SLIDE_CATEGORIES.map((cat) => {
             const active = selectedCategory === cat;
-            const accent =
-              cat === "All" ? colors.primary : CATEGORY_COLORS[cat] ?? colors.primary;
+            const accent = cat === "All" ? colors.primary : CATEGORY_COLORS[cat] ?? colors.primary;
             return (
               <Pressable
                 key={cat}
-                onPress={() => {
-                  setSelectedCategory(cat);
-                  Haptics.selectionAsync();
-                }}
+                onPress={() => { setSelectedCategory(cat); Haptics.selectionAsync(); }}
                 style={[
                   styles.catChip,
                   {
@@ -406,7 +505,38 @@ export default function SpotterScreen() {
           <Text style={[styles.startSub, { color: colors.mutedForeground }]}>
             {selectedCategory === "All" ? "All categories" : selectedCategory}
           </Text>
-          <Pressable style={[styles.startBtn, { overflow: "hidden" }]} onPress={startSession}>
+
+          {/* Timer selector */}
+          <View style={styles.timerRow}>
+            <Feather name="clock" size={14} color={colors.mutedForeground} style={{ marginRight: 8 }} />
+            <Text style={[styles.timerLabel, { color: colors.mutedForeground }]}>Timer</Text>
+            <View style={[styles.timerSegment, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+              {TIMER_OPTIONS.map((opt) => {
+                const active = timerDuration === opt.value;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    onPress={() => { setTimerDuration(opt.value); Haptics.selectionAsync(); }}
+                    style={[
+                      styles.timerOption,
+                      active && { backgroundColor: colors.primary },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.timerOptionTxt,
+                        { color: active ? "#fff" : colors.mutedForeground },
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <Pressable style={[styles.startBtn, { overflow: "hidden", marginTop: 12 }]} onPress={startSession}>
             <LinearGradient
               colors={[colors.accent, colors.primary]}
               start={{ x: 0, y: 0 }}
@@ -439,24 +569,27 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   infoTxt: { fontSize: 13, fontFamily: "Inter_400Regular", flex: 1, lineHeight: 20 },
-  sectionLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
-    letterSpacing: 1,
-    marginBottom: 12,
-  },
+  sectionLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 1, marginBottom: 12 },
   catGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 28 },
   catChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
   catChipTxt: { fontSize: 13, fontFamily: "Inter_500Medium" },
-  startCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 20,
-    alignItems: "center",
-    gap: 4,
-  },
+  startCard: { borderRadius: 16, borderWidth: 1, padding: 20, alignItems: "center", gap: 4 },
   startCount: { fontSize: 44, fontFamily: "Inter_700Bold" },
-  startSub: { fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 16 },
+  startSub: { fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 8 },
+
+  // Timer selector
+  timerRow: { flexDirection: "row", alignItems: "center", width: "100%", marginTop: 8 },
+  timerLabel: { fontSize: 13, fontFamily: "Inter_500Medium", marginRight: 10 },
+  timerSegment: {
+    flex: 1,
+    flexDirection: "row",
+    borderRadius: 10,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  timerOption: { flex: 1, paddingVertical: 8, alignItems: "center", borderRadius: 9 },
+  timerOptionTxt: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+
   startBtn: { width: "100%", borderRadius: 14 },
   startGrad: {
     flexDirection: "row",
@@ -482,13 +615,16 @@ const styles = StyleSheet.create({
   scoreNum: { fontSize: 15, fontFamily: "Inter_700Bold" },
   scoreSep: { fontSize: 13, fontFamily: "Inter_400Regular" },
 
-  // Spotting image card
-  spotCard: {
-    marginHorizontal: 16,
-    borderRadius: 20,
-    overflow: "hidden",
-    backgroundColor: "#111",
+  // Timer ring
+  timerRing: {
+    borderWidth: 2.5,
+    alignItems: "center",
+    justifyContent: "center",
   },
+  timerTxt: { fontSize: 13, fontFamily: "Inter_700Bold" },
+
+  // Spotting card
+  spotCard: { marginHorizontal: 16, borderRadius: 20, overflow: "hidden", backgroundColor: "#111" },
 
   // Bottom
   spotBottom: { paddingHorizontal: 16, paddingTop: 12 },
@@ -528,14 +664,7 @@ const styles = StyleSheet.create({
   // Done
   donePct: { fontSize: 72, fontFamily: "Inter_700Bold", letterSpacing: -2 },
   doneLabel: { fontSize: 18, fontFamily: "Inter_500Medium" },
-  doneStatBox: {
-    flex: 1,
-    alignItems: "center",
-    gap: 6,
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
+  doneStatBox: { flex: 1, alignItems: "center", gap: 6, padding: 16, borderRadius: 14, borderWidth: 1 },
   doneStatNum: { fontSize: 28, fontFamily: "Inter_700Bold" },
   doneStatTxt: { fontSize: 13, fontFamily: "Inter_400Regular" },
   missedList: { borderRadius: 14, borderWidth: 1, padding: 16, gap: 10 },
