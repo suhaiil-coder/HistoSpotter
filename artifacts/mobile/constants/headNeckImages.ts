@@ -1,0 +1,28 @@
+import { ImageSourcePropType } from "react-native";
+
+export const HEAD_NECK_IMAGES: Record<number, ImageSourcePropType> = {
+  1: require("../assets/images/head-neck/specimen_01.jpg"),
+  2: require("../assets/images/head-neck/specimen_02.jpg"),
+  3: require("../assets/images/head-neck/specimen_03.jpg"),
+  4: require("../assets/images/head-neck/specimen_04.jpg"),
+  5: require("../assets/images/head-neck/specimen_05.jpg"),
+  6: require("../assets/images/head-neck/specimen_06.jpg"),
+  7: require("../assets/images/head-neck/specimen_07.jpg"),
+  8: require("../assets/images/head-neck/specimen_08.jpg"),
+  9: require("../assets/images/head-neck/specimen_09.jpg"),
+  10: require("../assets/images/head-neck/specimen_10.jpg"),
+  11: require("../assets/images/head-neck/specimen_11.jpg"),
+  12: require("../assets/images/head-neck/specimen_12.jpg"),
+  13: require("../assets/images/head-neck/specimen_13.jpg"),
+  14: require("../assets/images/head-neck/specimen_14.jpg"),
+  15: require("../assets/images/head-neck/specimen_15.jpg"),
+  16: require("../assets/images/head-neck/specimen_16.jpg"),
+  17: require("../assets/images/head-neck/specimen_17.jpg"),
+  18: require("../assets/images/head-neck/specimen_18.jpg"),
+  19: require("../assets/images/head-neck/specimen_19.jpg"),
+  20: require("../assets/images/head-neck/specimen_20.jpg"),
+  21: require("../assets/images/head-neck/specimen_21.jpg"),
+  22: require("../assets/images/head-neck/specimen_22.jpg"),
+  23: require("../assets/images/head-neck/specimen_23.jpg"),
+  24: require("../assets/images/head-neck/specimen_24.jpg"),
+};

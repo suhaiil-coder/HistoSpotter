@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
@@ -14,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
 import { HEAD_NECK_QUESTIONS } from "@/constants/headNeckQuiz";
+import { HEAD_NECK_IMAGES } from "@/constants/headNeckImages";
 
 const TOTAL = HEAD_NECK_QUESTIONS.length;
 
@@ -150,28 +152,29 @@ export default function HeadNeckQuizScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Image placeholder */}
+        {/* Specimen image */}
         <View
           style={[
-            styles.imagePlaceholder,
+            styles.imageWrap,
             { backgroundColor: colors.card, borderColor: colors.border },
           ]}
         >
-          <View style={[styles.specimenBadge, { backgroundColor: colors.primary + "22" }]}>
-            <Text style={[styles.specimenLabel, { color: colors.primary }]}>
-              SPECIMEN
-            </Text>
-            <Text style={[styles.specimenNum, { color: colors.primary }]}>
+          <Image
+            source={HEAD_NECK_IMAGES[question.id]}
+            style={styles.specimenImage}
+            contentFit="cover"
+            transition={200}
+          />
+
+          {/* Specimen number badge — top-left */}
+          <View style={[styles.specimenBadge, { backgroundColor: "rgba(0,0,0,0.55)" }]}>
+            <Text style={styles.specimenLabel}>SPECIMEN</Text>
+            <Text style={styles.specimenNum}>
               {String(question.id).padStart(2, "0")}
             </Text>
           </View>
 
-          <Feather name="image" size={40} color={colors.border} style={{ marginTop: 12 }} />
-          <Text style={[styles.imagePlaceholderTxt, { color: colors.mutedForeground }]}>
-            Anatomy specimen image
-          </Text>
-
-          {/* Structure name revealed after answer */}
+          {/* Structure name tag — bottom centre, revealed after answer */}
           {revealed && (
             <View style={[styles.structureTag, { backgroundColor: colors.primary }]}>
               <Feather name="check-circle" size={13} color="#fff" />
@@ -354,39 +357,40 @@ const styles = StyleSheet.create({
   // Scroll
   scroll: { paddingHorizontal: 16, paddingTop: 16, gap: 14 },
 
-  // Image placeholder
-  imagePlaceholder: {
+  // Specimen image
+  imageWrap: {
     borderRadius: 20,
     borderWidth: 1,
-    height: 200,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
+    height: 260,
     overflow: "hidden",
     position: "relative",
   },
+  specimenImage: {
+    width: "100%",
+    height: "100%",
+  },
   specimenBadge: {
     position: "absolute",
-    top: 14,
-    left: 14,
+    top: 12,
+    left: 12,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 8,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
   },
-  specimenLabel: { fontSize: 9, fontFamily: "Inter_700Bold", letterSpacing: 1.2 },
-  specimenNum: { fontSize: 16, fontFamily: "Inter_700Bold" },
-  imagePlaceholderTxt: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  specimenLabel: { fontSize: 9, fontFamily: "Inter_700Bold", letterSpacing: 1.2, color: "#fff" },
+  specimenNum: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#fff" },
   structureTag: {
     position: "absolute",
     bottom: 12,
+    alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: 20,
   },
   structureTagTxt: { fontSize: 13, fontFamily: "Inter_700Bold", color: "#fff" },
