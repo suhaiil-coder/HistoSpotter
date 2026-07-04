@@ -28,6 +28,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
         <Label>Stats</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="chat">
+        <Icon sf={{ default: "message", selected: "message.fill" }} />
+        <Label>Chat</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
         <Icon sf={{ default: "gear", selected: "gear" }} />
         <Label>Settings</Label>
@@ -105,6 +109,18 @@ function ClassicTabLayout() {
               <SymbolView name="bookmark" tintColor={color} size={size} />
             ) : (
               <Feather name="bookmark" size={size} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: "Chat",
+          tabBarIcon: ({ color, size }) =>
+            isIOS ? (
+              <SymbolView name="message" tintColor={color} size={size} />
+            ) : (
+              <Feather name="message-circle" size={size} color={color} />
             ),
         }}
       />
