@@ -1,0 +1,1 @@
+- [Optional Clerk auth on Expo](optional-clerk-auth-expo.md) — never gate screens on Clerk isLoaded (timeout fallback); verify WS tokens server-side since client senderId is spoofable; test WS with a separate observer socket.

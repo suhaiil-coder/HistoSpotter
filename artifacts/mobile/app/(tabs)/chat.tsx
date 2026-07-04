@@ -1,9 +1,10 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
+import { useAuth } from "@clerk/expo";
+import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Alert,
   FlatList,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
@@ -11,20 +12,45 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useChatIdentity } from "@/hooks/useChatIdentity";
 import { useColors } from "@/hooks/useColors";
 
-const USERNAME_KEY = "histospotter_chat_username";
 const MAX_USERNAME = 20;
 const MAX_MESSAGE = 400;
 const INPUT_BAR_HEIGHT = 68; // approximate height of the input bar
+
+// WhatsApp-style stable colors for sender names.
+const NAME_COLORS = [
+  "#A855F7",
+  "#22D3EE",
+  "#F472B6",
+  "#34D399",
+  "#FBBF24",
+  "#60A5FA",
+  "#FB7185",
+  "#4ADE80",
+  "#C084FC",
+  "#F59E0B",
+];
+
+function colorForName(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash << 5) - hash + name.charCodeAt(i);
+    hash |= 0;
+  }
+  return NAME_COLORS[Math.abs(hash) % NAME_COLORS.length];
+}
 
 interface ChatMsg {
   id: number;
   username: string;
   message: string;
   createdAt: string;
+  senderId?: string;
 }
 
 type ConnStatus = "idle" | "connecting" | "connected" | "disconnected";
@@ -60,12 +86,23 @@ function useWebKeyboardOffset(): number {
 export default function ChatScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const topInset = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomInset = insets.bottom || 0;
   const webKbOffset = useWebKeyboardOffset();
   const isWeb = Platform.OS === "web";
 
-  const [username, setUsername] = useState<string | null>(null);
+  const { ready, senderId, username, isSignedIn, setGuestName } =
+    useChatIdentity();
+  const { signOut, getToken } = useAuth();
+
+  // Keep latest auth accessors available to the WS onopen closure.
+  const authRef = useRef<{
+    isSignedIn: boolean;
+    getToken: () => Promise<string | null>;
+  }>({ isSignedIn: false, getToken: async () => null });
+  authRef.current = { isSignedIn: !!isSignedIn, getToken };
+
   const [nameInput, setNameInput] = useState("");
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
@@ -74,12 +111,6 @@ export default function ChatScreen() {
   const wsRef = useRef<WebSocket | null>(null);
   const listRef = useRef<FlatList<ChatMsg>>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    AsyncStorage.getItem(USERNAME_KEY).then((name) => {
-      if (name) setUsername(name);
-    });
-  }, []);
 
   const connect = useCallback((name: string) => {
     const domain = process.env.EXPO_PUBLIC_DOMAIN;
@@ -97,7 +128,22 @@ export default function ChatScreen() {
     const ws = new WebSocket(`${proto}://${domain}/api/chat/ws`);
     wsRef.current = ws;
     setStatus("connecting");
-    ws.onopen = () => setStatus("connected");
+    ws.onopen = () => {
+      setStatus("connected");
+      // Prove Clerk identity to the server so `clerk:` senderIds are trusted.
+      if (authRef.current.isSignedIn) {
+        authRef.current
+          .getToken()
+          .then((token) => {
+            if (token && ws.readyState === 1) {
+              ws.send(JSON.stringify({ type: "auth", token }));
+            }
+          })
+          .catch(() => {
+            // token unavailable — continue without verified identity
+          });
+      }
+    };
     ws.onclose = () => {
       setStatus("disconnected");
       reconnectTimer.current = setTimeout(() => connect(name), 4000);
@@ -107,13 +153,19 @@ export default function ChatScreen() {
       try {
         const data = JSON.parse(event.data as string) as
           | { type: "history"; messages: ChatMsg[] }
-          | { type: "message"; message: ChatMsg };
+          | { type: "message"; message: ChatMsg }
+          | { type: "delete"; id: number };
         if (data.type === "history") {
           setMessages(data.messages);
-          setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 100);
+          setTimeout(
+            () => listRef.current?.scrollToEnd({ animated: false }),
+            100,
+          );
         } else if (data.type === "message") {
           setMessages((prev) => [...prev, data.message]);
           setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
+        } else if (data.type === "delete") {
+          setMessages((prev) => prev.filter((m) => m.id !== data.id));
         }
       } catch {
         // ignore malformed frames
@@ -133,19 +185,53 @@ export default function ChatScreen() {
     };
   }, [username, connect]);
 
-  const saveUsername = useCallback(() => {
+  const saveGuestName = useCallback(() => {
     const trimmed = nameInput.trim().slice(0, MAX_USERNAME);
     if (!trimmed) return;
-    AsyncStorage.setItem(USERNAME_KEY, trimmed);
-    setUsername(trimmed);
-  }, [nameInput]);
+    void setGuestName(trimmed);
+  }, [nameInput, setGuestName]);
 
   const sendMessage = useCallback(() => {
     const text = input.trim();
-    if (!text || !username || wsRef.current?.readyState !== 1) return;
-    wsRef.current.send(JSON.stringify({ username, message: text }));
+    if (!text || !username || !senderId || wsRef.current?.readyState !== 1)
+      return;
+    wsRef.current.send(JSON.stringify({ username, message: text, senderId }));
     setInput("");
-  }, [input, username]);
+  }, [input, username, senderId]);
+
+  const unsend = useCallback(
+    (id: number) => {
+      if (!senderId || wsRef.current?.readyState !== 1) return;
+      wsRef.current.send(JSON.stringify({ type: "delete", id, senderId }));
+    },
+    [senderId],
+  );
+
+  const confirmUnsend = useCallback(
+    (id: number) => {
+      if (isWeb) {
+        if (window.confirm("Unsend this message for everyone?")) unsend(id);
+        return;
+      }
+      Alert.alert("Unsend message", "Delete this message for everyone?", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Unsend", style: "destructive", onPress: () => unsend(id) },
+      ]);
+    },
+    [isWeb, unsend],
+  );
+
+  const handleSignOut = useCallback(() => {
+    const doSignOut = () => void signOut();
+    if (isWeb) {
+      if (window.confirm("Sign out of your account?")) doSignOut();
+      return;
+    }
+    Alert.alert("Sign out", "Sign out of your account?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Sign out", style: "destructive", onPress: doSignOut },
+    ]);
+  }, [isWeb, signOut]);
 
   const statusColor =
     status === "connected"
@@ -160,7 +246,12 @@ export default function ChatScreen() {
         ? "Connecting…"
         : "Offline";
 
-  // ── Username picker ──────────────────────────────────────────────────
+  // ── Loading identity ─────────────────────────────────────────────────
+  if (!ready) {
+    return <View style={[styles.screen, { backgroundColor: colors.background }]} />;
+  }
+
+  // ── Guest name picker (only for signed-out users w/o a name) ──────────
   if (!username) {
     return (
       <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -174,7 +265,7 @@ export default function ChatScreen() {
             Join the Chat
           </Text>
           <Text style={[styles.nameSub, { color: colors.mutedForeground }]}>
-            Pick a display name to get started
+            Pick a display name to jump in as a guest
           </Text>
           <TextInput
             style={[
@@ -191,7 +282,7 @@ export default function ChatScreen() {
             onChangeText={setNameInput}
             maxLength={MAX_USERNAME}
             autoFocus
-            onSubmitEditing={saveUsername}
+            onSubmitEditing={saveGuestName}
             returnKeyType="done"
           />
           <Pressable
@@ -203,7 +294,7 @@ export default function ChatScreen() {
                   : colors.secondary,
               },
             ]}
-            onPress={saveUsername}
+            onPress={saveGuestName}
             disabled={!nameInput.trim()}
           >
             <Text
@@ -212,7 +303,25 @@ export default function ChatScreen() {
                 { color: nameInput.trim() ? "#fff" : colors.mutedForeground },
               ]}
             >
-              Enter Chat
+              Enter as Guest
+            </Text>
+          </Pressable>
+
+          <View style={styles.dividerRow}>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dividerTxt, { color: colors.mutedForeground }]}>
+              or
+            </Text>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          </View>
+
+          <Pressable
+            style={[styles.signInBtn, { borderColor: colors.border }]}
+            onPress={() => router.push("/(auth)/sign-in")}
+          >
+            <Feather name="log-in" size={16} color={colors.primary} />
+            <Text style={[styles.signInBtnTxt, { color: colors.primary }]}>
+              Sign in for a real identity
             </Text>
           </Pressable>
         </View>
@@ -221,9 +330,6 @@ export default function ChatScreen() {
   }
 
   // ── Chat room ────────────────────────────────────────────────────────
-  // On web: input bar is absolutely positioned so the flex layout can't
-  // push it off screen, and it lifts above the keyboard via webKbOffset.
-  // On native: use KeyboardAvoidingView + normal flow layout.
   const msgBottomPad = isWeb
     ? INPUT_BAR_HEIGHT + webKbOffset + 8
     : bottomInset + 16;
@@ -241,20 +347,39 @@ export default function ChatScreen() {
           },
         ]}
       >
-        <View>
+        <View style={styles.headerLeft}>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>
             Chat
           </Text>
           <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
-            Signed in as{" "}
+            {isSignedIn ? "Signed in as " : "Guest · "}
             <Text style={{ color: colors.primary }}>{username}</Text>
           </Text>
         </View>
-        <View style={styles.statusRow}>
-          <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-          <Text style={[styles.statusTxt, { color: statusColor }]}>
-            {statusLabel}
-          </Text>
+        <View style={styles.headerRight}>
+          <View style={styles.statusRow}>
+            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+            <Text style={[styles.statusTxt, { color: statusColor }]}>
+              {statusLabel}
+            </Text>
+          </View>
+          {isSignedIn ? (
+            <Pressable
+              style={[styles.accountBtn, { borderColor: colors.border }]}
+              onPress={handleSignOut}
+              hitSlop={8}
+            >
+              <Feather name="log-out" size={16} color={colors.mutedForeground} />
+            </Pressable>
+          ) : (
+            <Pressable
+              style={[styles.accountBtn, { borderColor: colors.border }]}
+              onPress={() => router.push("/(auth)/sign-in")}
+              hitSlop={8}
+            >
+              <Feather name="log-in" size={16} color={colors.primary} />
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -280,17 +405,21 @@ export default function ChatScreen() {
           ]}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => {
-            const isSelf = item.username === username;
+            const isSelf = item.senderId
+              ? item.senderId === senderId
+              : item.username === username;
+            const canUnsend = !!senderId && item.senderId === senderId;
+            const nameColor = colorForName(item.username);
             return (
               <View style={[styles.msgRow, isSelf && styles.msgRowSelf]}>
                 {!isSelf ? (
                   <View
                     style={[
                       styles.avatar,
-                      { backgroundColor: colors.primary + "26" },
+                      { backgroundColor: nameColor + "26" },
                     ]}
                   >
-                    <Text style={[styles.avatarTxt, { color: colors.primary }]}>
+                    <Text style={[styles.avatarTxt, { color: nameColor }]}>
                       {item.username.charAt(0).toUpperCase()}
                     </Text>
                   </View>
@@ -300,11 +429,15 @@ export default function ChatScreen() {
 
                 <View style={[styles.msgBody, isSelf && styles.msgBodySelf]}>
                   {!isSelf && (
-                    <Text style={[styles.senderName, { color: colors.primary }]}>
+                    <Text style={[styles.senderName, { color: nameColor }]}>
                       {item.username}
                     </Text>
                   )}
-                  <View
+                  <Pressable
+                    onLongPress={
+                      canUnsend ? () => confirmUnsend(item.id) : undefined
+                    }
+                    delayLongPress={350}
                     style={[
                       styles.bubble,
                       isSelf
@@ -326,7 +459,7 @@ export default function ChatScreen() {
                     >
                       {item.message}
                     </Text>
-                  </View>
+                  </Pressable>
                   <Text
                     style={[
                       styles.timestamp,
@@ -338,6 +471,7 @@ export default function ChatScreen() {
                   >
                     {isSelf ? "You · " : ""}
                     {formatTime(item.createdAt)}
+                    {canUnsend ? " · hold to unsend" : ""}
                   </Text>
                 </View>
               </View>
@@ -355,8 +489,6 @@ export default function ChatScreen() {
             backgroundColor: colors.card,
             paddingBottom: isWeb ? 10 : bottomInset + 10,
           },
-          // On web: absolute so it can't be pushed off-screen by content,
-          // and shifts upward by the keyboard height.
           isWeb && {
             position: "absolute",
             bottom: webKbOffset,
@@ -411,13 +543,10 @@ export default function ChatScreen() {
     </View>
   );
 
-  // Native: wrap with KeyboardAvoidingView so input rises above keyboard
+  // Native: keyboard-controller's KeyboardAvoidingView lifts input smoothly.
   if (!isWeb) {
     return (
-      <KeyboardAvoidingView
-        style={styles.kav}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
+      <KeyboardAvoidingView style={styles.kav} behavior="padding">
         {content}
       </KeyboardAvoidingView>
     );
@@ -430,7 +559,7 @@ const styles = StyleSheet.create({
   kav: { flex: 1 },
   screen: { flex: 1 },
 
-  // Username picker
+  // Guest picker
   namePicker: {
     width: "100%",
     maxWidth: 340,
@@ -465,6 +594,24 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   nameBtnTxt: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginVertical: 4,
+  },
+  divider: { flex: 1, height: 1 },
+  dividerTxt: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  signInBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 13,
+  },
+  signInBtnTxt: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
 
   // Header
   header: {
@@ -475,11 +622,21 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: 1,
   },
+  headerLeft: { flexShrink: 1 },
   headerTitle: { fontSize: 20, fontFamily: "Inter_700Bold" },
   headerSub: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
   statusRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   statusTxt: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  accountBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   // Empty
   empty: {
