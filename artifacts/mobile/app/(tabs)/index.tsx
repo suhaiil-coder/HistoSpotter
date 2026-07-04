@@ -195,8 +195,9 @@ export default function HomeScreen() {
         isOpen={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         onSelect={(id) => {
-          // Future: navigate to the selected section
-          console.log("Selected section:", id);
+          if (id === "head-neck" || id === "charts-quiz") {
+            router.push("/head-neck-quiz");
+          }
         }}
       />
     </View>
