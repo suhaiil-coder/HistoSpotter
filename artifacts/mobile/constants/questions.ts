@@ -64,7 +64,6 @@ export const imageMap: Record<string, any> = {
   fallopian_tube: require("../assets/images/slides/fallopian_tube.jpg"),
   ovary: require("../assets/images/slides/ovary.jpg"),
   uterus_proliferative: require("../assets/images/slides/uterus_proliferative.jpg"),
-  ureter: require("../assets/images/slides/ureter.jpg"),
   lung: require("../assets/images/slides/lung.jpg"),
   trachea: require("../assets/images/slides/trachea.jpg"),
   suprarenal_gland: require("../assets/images/slides/suprarenal_gland.jpg"),
