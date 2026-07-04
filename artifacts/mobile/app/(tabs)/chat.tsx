@@ -3,7 +3,6 @@ import { Feather } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
@@ -33,15 +32,32 @@ function formatTime(iso: string): string {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-function getBubbleColor(username: string, selfName: string, primary: string, card: string) {
-  return username === selfName ? primary : card;
+function useWebKeyboardOffset(): number {
+  const [offset, setOffset] = useState(0);
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const vv = (window as Window & { visualViewport?: VisualViewport }).visualViewport;
+    if (!vv) return;
+    const handler = () => {
+      const hidden = window.innerHeight - vv.height - vv.offsetTop;
+      setOffset(Math.max(0, hidden));
+    };
+    vv.addEventListener("resize", handler);
+    vv.addEventListener("scroll", handler);
+    return () => {
+      vv.removeEventListener("resize", handler);
+      vv.removeEventListener("scroll", handler);
+    };
+  }, []);
+  return offset;
 }
 
 export default function ChatScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const topInset = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
-  const bottomInset = insets.bottom || 8;
+  const bottomInset = insets.bottom || 0;
+  const webKbOffset = useWebKeyboardOffset();
 
   const [username, setUsername] = useState<string | null>(null);
   const [nameInput, setNameInput] = useState("");
@@ -53,7 +69,6 @@ export default function ChatScreen() {
   const listRef = useRef<FlatList<ChatMsg>>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load saved username
   useEffect(() => {
     AsyncStorage.getItem(USERNAME_KEY).then((name) => {
       if (name) setUsername(name);
@@ -69,7 +84,12 @@ export default function ChatScreen() {
       wsRef.current.close();
     }
 
-    const proto = Platform.OS === "web" ? (location.protocol === "https:" ? "wss" : "ws") : "wss";
+    const proto =
+      Platform.OS === "web"
+        ? location.protocol === "https:"
+          ? "wss"
+          : "ws"
+        : "wss";
     const ws = new WebSocket(`${proto}://${domain}/api/chat/ws`);
     wsRef.current = ws;
     setStatus("connecting");
@@ -81,9 +101,7 @@ export default function ChatScreen() {
       reconnectTimer.current = setTimeout(() => connect(name), 4000);
     };
 
-    ws.onerror = () => {
-      setStatus("disconnected");
-    };
+    ws.onerror = () => setStatus("disconnected");
 
     ws.onmessage = (event) => {
       try {
@@ -103,7 +121,6 @@ export default function ChatScreen() {
     };
   }, []);
 
-  // Connect when username becomes available
   useEffect(() => {
     if (!username) return;
     connect(username);
@@ -131,21 +148,43 @@ export default function ChatScreen() {
   }, [input, username]);
 
   const statusColor =
-    status === "connected" ? colors.success : status === "connecting" ? "#F59E0B" : colors.destructive;
+    status === "connected"
+      ? colors.success
+      : status === "connecting"
+        ? "#F59E0B"
+        : colors.destructive;
   const statusLabel =
-    status === "connected" ? "Live" : status === "connecting" ? "Connecting…" : "Offline";
+    status === "connected"
+      ? "Live"
+      : status === "connecting"
+        ? "Connecting…"
+        : "Offline";
 
   // ── Username picker ──────────────────────────────────────────────────
   if (!username) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <View style={[styles.namePicker, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.nameTitle, { color: colors.foreground }]}>Join the Chat</Text>
+        <View
+          style={[
+            styles.namePicker,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
+          <Text style={[styles.nameTitle, { color: colors.foreground }]}>
+            Join the Chat
+          </Text>
           <Text style={[styles.nameSub, { color: colors.mutedForeground }]}>
             Pick a display name to get started
           </Text>
           <TextInput
-            style={[styles.nameInput, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+            style={[
+              styles.nameInput,
+              {
+                backgroundColor: colors.secondary,
+                borderColor: colors.border,
+                color: colors.foreground,
+              },
+            ]}
             placeholder="Your name…"
             placeholderTextColor={colors.mutedForeground}
             value={nameInput}
@@ -156,11 +195,25 @@ export default function ChatScreen() {
             returnKeyType="done"
           />
           <Pressable
-            style={[styles.nameBtn, { backgroundColor: nameInput.trim() ? colors.primary : colors.secondary }]}
+            style={[
+              styles.nameBtn,
+              {
+                backgroundColor: nameInput.trim()
+                  ? colors.primary
+                  : colors.secondary,
+              },
+            ]}
             onPress={saveUsername}
             disabled={!nameInput.trim()}
           >
-            <Text style={[styles.nameBtnTxt, { color: nameInput.trim() ? "#fff" : colors.mutedForeground }]}>
+            <Text
+              style={[
+                styles.nameBtnTxt,
+                {
+                  color: nameInput.trim() ? "#fff" : colors.mutedForeground,
+                },
+              ]}
+            >
               Enter Chat
             </Text>
           </Pressable>
@@ -171,22 +224,37 @@ export default function ChatScreen() {
 
   // ── Chat screen ──────────────────────────────────────────────────────
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={0}
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: colors.background, paddingBottom: webKbOffset },
+      ]}
     >
       {/* Header */}
-      <View style={[styles.header, { paddingTop: topInset + 8, borderBottomColor: colors.border, backgroundColor: colors.card }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: topInset + 8,
+            borderBottomColor: colors.border,
+            backgroundColor: colors.card,
+          },
+        ]}
+      >
         <View>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Chat</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+            Chat
+          </Text>
           <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
-            Signed in as <Text style={{ color: colors.primary }}>{username}</Text>
+            Signed in as{" "}
+            <Text style={{ color: colors.primary }}>{username}</Text>
           </Text>
         </View>
         <View style={styles.statusChip}>
           <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-          <Text style={[styles.statusTxt, { color: statusColor }]}>{statusLabel}</Text>
+          <Text style={[styles.statusTxt, { color: statusColor }]}>
+            {statusLabel}
+          </Text>
         </View>
       </View>
 
@@ -194,8 +262,12 @@ export default function ChatScreen() {
       {messages.length === 0 ? (
         <View style={styles.emptyWrap}>
           <Feather name="message-circle" size={40} color={colors.border} />
-          <Text style={[styles.emptyTxt, { color: colors.mutedForeground }]}>
-            {status === "connected" ? "No messages yet — say hello!" : "Connecting to chat…"}
+          <Text
+            style={[styles.emptyTxt, { color: colors.mutedForeground }]}
+          >
+            {status === "connected"
+              ? "No messages yet — say hello!"
+              : "Connecting to chat…"}
           </Text>
         </View>
       ) : (
@@ -203,22 +275,38 @@ export default function ChatScreen() {
           ref={listRef}
           data={messages}
           keyExtractor={(m) => String(m.id)}
-          contentContainerStyle={[styles.msgList, { paddingBottom: bottomInset + 16 }]}
+          style={styles.msgListContainer}
+          contentContainerStyle={[
+            styles.msgList,
+            { paddingBottom: bottomInset + 16 },
+          ]}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => {
             const isSelf = item.username === username;
             return (
               <View style={[styles.msgRow, isSelf && styles.msgRowSelf]}>
                 {!isSelf && (
-                  <View style={[styles.avatar, { backgroundColor: colors.primary + "33" }]}>
-                    <Text style={[styles.avatarTxt, { color: colors.primary }]}>
+                  <View
+                    style={[
+                      styles.avatar,
+                      { backgroundColor: colors.primary + "33" },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.avatarTxt, { color: colors.primary }]}
+                    >
                       {item.username.charAt(0).toUpperCase()}
                     </Text>
                   </View>
                 )}
                 <View style={styles.msgBody}>
                   {!isSelf && (
-                    <Text style={[styles.msgUser, { color: colors.mutedForeground }]}>
+                    <Text
+                      style={[
+                        styles.msgUser,
+                        { color: colors.mutedForeground },
+                      ]}
+                    >
                       {item.username}
                     </Text>
                   )}
@@ -226,17 +314,37 @@ export default function ChatScreen() {
                     style={[
                       styles.bubble,
                       {
-                        backgroundColor: getBubbleColor(item.username, username, colors.primary, colors.card),
-                        borderColor: isSelf ? colors.primary : colors.border,
+                        backgroundColor:
+                          item.username === username
+                            ? colors.primary
+                            : colors.card,
+                        borderColor: isSelf
+                          ? colors.primary
+                          : colors.border,
                         alignSelf: isSelf ? "flex-end" : "flex-start",
                       },
                     ]}
                   >
-                    <Text style={[styles.bubbleTxt, { color: isSelf ? "#fff" : colors.foreground }]}>
+                    <Text
+                      style={[
+                        styles.bubbleTxt,
+                        {
+                          color: isSelf ? "#fff" : colors.foreground,
+                        },
+                      ]}
+                    >
                       {item.message}
                     </Text>
                   </View>
-                  <Text style={[styles.msgTime, { color: colors.mutedForeground, textAlign: isSelf ? "right" : "left" }]}>
+                  <Text
+                    style={[
+                      styles.msgTime,
+                      {
+                        color: colors.mutedForeground,
+                        textAlign: isSelf ? "right" : "left",
+                      },
+                    ]}
+                  >
                     {formatTime(item.createdAt)}
                   </Text>
                 </View>
@@ -251,14 +359,21 @@ export default function ChatScreen() {
         style={[
           styles.inputBar,
           {
-            paddingBottom: bottomInset + 8,
+            paddingBottom: bottomInset + 10,
             borderTopColor: colors.border,
             backgroundColor: colors.card,
           },
         ]}
       >
         <TextInput
-          style={[styles.textInput, { backgroundColor: colors.secondary, borderColor: colors.border, color: colors.foreground }]}
+          style={[
+            styles.textInput,
+            {
+              backgroundColor: colors.secondary,
+              borderColor: colors.border,
+              color: colors.foreground,
+            },
+          ]}
           placeholder="Type a message…"
           placeholderTextColor={colors.mutedForeground}
           value={input}
@@ -272,21 +387,39 @@ export default function ChatScreen() {
         <Pressable
           style={[
             styles.sendBtn,
-            { backgroundColor: input.trim() && status === "connected" ? colors.primary : colors.secondary },
+            {
+              backgroundColor:
+                input.trim() && status === "connected"
+                  ? colors.primary
+                  : colors.secondary,
+            },
           ]}
           onPress={sendMessage}
           disabled={!input.trim() || status !== "connected"}
         >
-          <Feather name="send" size={18} color={input.trim() && status === "connected" ? "#fff" : colors.mutedForeground} />
+          <Feather
+            name="send"
+            size={18}
+            color={
+              input.trim() && status === "connected"
+                ? "#fff"
+                : colors.mutedForeground
+            }
+          />
         </Pressable>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
 
   // Username picker
   namePicker: {
@@ -298,8 +431,17 @@ const styles = StyleSheet.create({
     gap: 12,
     alignItems: "stretch",
   },
-  nameTitle: { fontSize: 22, fontFamily: "Inter_700Bold", textAlign: "center" },
-  nameSub: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", marginBottom: 4 },
+  nameTitle: {
+    fontSize: 22,
+    fontFamily: "Inter_700Bold",
+    textAlign: "center",
+  },
+  nameSub: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    marginBottom: 4,
+  },
   nameInput: {
     borderRadius: 12,
     borderWidth: 1,
@@ -332,17 +474,39 @@ const styles = StyleSheet.create({
   statusTxt: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
 
   // Empty state
-  emptyWrap: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
-  emptyTxt: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", maxWidth: 220 },
+  emptyWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+  emptyTxt: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    maxWidth: 220,
+  },
 
   // Messages
+  msgListContainer: { flex: 1 },
   msgList: { paddingHorizontal: 12, paddingTop: 16, gap: 12 },
   msgRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
   msgRowSelf: { flexDirection: "row-reverse" },
-  avatar: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center", marginBottom: 18 },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
+  },
   avatarTxt: { fontSize: 13, fontFamily: "Inter_700Bold" },
   msgBody: { flex: 1, gap: 2 },
-  msgUser: { fontSize: 11, fontFamily: "Inter_500Medium", marginLeft: 4 },
+  msgUser: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    marginLeft: 4,
+  },
   bubble: {
     maxWidth: "80%",
     paddingHorizontal: 14,
@@ -350,8 +514,16 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
   },
-  bubbleTxt: { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 20 },
-  msgTime: { fontSize: 10, fontFamily: "Inter_400Regular", marginHorizontal: 4 },
+  bubbleTxt: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 20,
+  },
+  msgTime: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    marginHorizontal: 4,
+  },
 
   // Input
   inputBar: {
@@ -359,7 +531,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     gap: 8,
     paddingHorizontal: 12,
-    paddingTop: 8,
+    paddingTop: 10,
     borderTopWidth: 1,
   },
   textInput: {
