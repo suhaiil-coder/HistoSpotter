@@ -285,57 +285,59 @@ export default function ChatScreen() {
             const isSelf = item.username === username;
             return (
               <View style={[styles.msgRow, isSelf && styles.msgRowSelf]}>
-                {!isSelf && (
+                {/* Avatar — others only */}
+                {!isSelf ? (
                   <View
                     style={[
                       styles.avatar,
-                      { backgroundColor: colors.primary + "33" },
+                      { backgroundColor: colors.primary + "26" },
                     ]}
                   >
-                    <Text
-                      style={[styles.avatarTxt, { color: colors.primary }]}
-                    >
+                    <Text style={[styles.avatarTxt, { color: colors.primary }]}>
                       {item.username.charAt(0).toUpperCase()}
                     </Text>
                   </View>
+                ) : (
+                  <View style={styles.avatarSpacer} />
                 )}
-                <View style={styles.msgBody}>
+
+                <View style={[styles.msgBody, isSelf && styles.msgBodySelf]}>
+                  {/* Name label — others only */}
                   {!isSelf && (
-                    <Text
-                      style={[
-                        styles.msgUser,
-                        { color: colors.mutedForeground },
-                      ]}
-                    >
+                    <Text style={[styles.msgUser, { color: colors.primary }]}>
                       {item.username}
                     </Text>
                   )}
+
+                  {/* Bubble */}
                   <View
                     style={[
                       styles.bubble,
-                      {
-                        backgroundColor:
-                          item.username === username
-                            ? colors.primary
-                            : colors.card,
-                        borderColor: isSelf
-                          ? colors.primary
-                          : colors.border,
-                        alignSelf: isSelf ? "flex-end" : "flex-start",
-                      },
+                      isSelf
+                        ? [
+                            styles.bubbleSelf,
+                            { backgroundColor: colors.primary },
+                          ]
+                        : [
+                            styles.bubbleOther,
+                            {
+                              backgroundColor: colors.card,
+                              borderColor: colors.border,
+                            },
+                          ],
                     ]}
                   >
                     <Text
                       style={[
                         styles.bubbleTxt,
-                        {
-                          color: isSelf ? "#fff" : colors.foreground,
-                        },
+                        { color: isSelf ? "#fff" : colors.foreground },
                       ]}
                     >
                       {item.message}
                     </Text>
                   </View>
+
+                  {/* Timestamp */}
                   <Text
                     style={[
                       styles.msgTime,
@@ -345,7 +347,7 @@ export default function ChatScreen() {
                       },
                     ]}
                   >
-                    {formatTime(item.createdAt)}
+                    {isSelf ? `You · ` : ""}{formatTime(item.createdAt)}
                   </Text>
                 </View>
               </View>
@@ -489,29 +491,40 @@ const styles = StyleSheet.create({
 
   // Messages
   msgListContainer: { flex: 1 },
-  msgList: { paddingHorizontal: 12, paddingTop: 16, gap: 12 },
+  msgList: { paddingHorizontal: 12, paddingTop: 16, gap: 16 },
   msgRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
   msgRowSelf: { flexDirection: "row-reverse" },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 18,
+    marginBottom: 20,
+    flexShrink: 0,
   },
+  avatarSpacer: { width: 34, flexShrink: 0 },
   avatarTxt: { fontSize: 13, fontFamily: "Inter_700Bold" },
-  msgBody: { flex: 1, gap: 2 },
+  msgBody: { flex: 1, gap: 3, alignItems: "flex-start" },
+  msgBodySelf: { alignItems: "flex-end" },
   msgUser: {
     fontSize: 11,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Inter_600SemiBold",
     marginLeft: 4,
+    marginBottom: 2,
   },
   bubble: {
-    maxWidth: "80%",
+    maxWidth: "82%",
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 16,
+  },
+  bubbleSelf: {
+    borderRadius: 18,
+    borderBottomRightRadius: 4,
+  },
+  bubbleOther: {
+    borderRadius: 18,
+    borderBottomLeftRadius: 4,
     borderWidth: 1,
   },
   bubbleTxt: {
@@ -523,6 +536,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: "Inter_400Regular",
     marginHorizontal: 4,
+    marginTop: 1,
   },
 
   // Input
