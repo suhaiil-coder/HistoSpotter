@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
@@ -110,6 +111,7 @@ export default function ChatScreen() {
 
   const wsRef = useRef<WebSocket | null>(null);
   const listRef = useRef<FlatList<ChatMsg>>(null);
+  const inputRef = useRef<TextInput>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const connect = useCallback((name: string) => {
@@ -383,7 +385,9 @@ export default function ChatScreen() {
         </View>
       </View>
 
-      {/* Messages */}
+      {/* Messages — tap anywhere to focus the input */}
+      <TouchableWithoutFeedback onPress={() => inputRef.current?.focus()}>
+        <View style={{ flex: 1 }}>
       {messages.length === 0 ? (
         <View style={[styles.empty, { paddingBottom: msgBottomPad }]}>
           <Feather name="message-circle" size={40} color={colors.border} />
@@ -399,6 +403,7 @@ export default function ChatScreen() {
           data={messages}
           keyExtractor={(m) => String(m.id)}
           style={styles.list}
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.listContent,
             { paddingBottom: msgBottomPad },
@@ -479,6 +484,8 @@ export default function ChatScreen() {
           }}
         />
       )}
+        </View>
+      </TouchableWithoutFeedback>
 
       {/* Input bar */}
       <View
@@ -498,6 +505,7 @@ export default function ChatScreen() {
         ]}
       >
         <TextInput
+          ref={inputRef}
           style={[
             styles.textInput,
             {
