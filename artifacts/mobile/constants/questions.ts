@@ -70,7 +70,6 @@ export const imageMap: Record<string, any> = {
   suprarenal_gland: require("../assets/images/slides/suprarenal_gland.jpg"),
   mammary_gland: require("../assets/images/slides/mammary_gland.jpg"),
   pituitary_gland: require("../assets/images/slides/pituitary_gland.jpg"),
-  thyroid_gland: require("../assets/images/slides/thyroid_gland.jpg"),
   cornea: require("../assets/images/slides/cornea.jpg"),
   retina: require("../assets/images/slides/retina.jpg"),
   cerebrum: require("../assets/images/slides/cerebrum.jpg"),
