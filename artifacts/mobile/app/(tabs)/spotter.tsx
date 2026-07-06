@@ -107,7 +107,7 @@ function TimerBar({
 export default function SpotterScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { height: screenHeight } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const topInset = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomInset = insets.bottom || 16;
 
@@ -367,7 +367,12 @@ export default function SpotterScreen() {
   // ── SPOTTING SCREEN ────────────────────────────────────────────────────
   if (sessionState === "spotting" && currentSlide) {
     const catColor = CATEGORY_COLORS[currentSlide.category] ?? colors.primary;
-    const cardHeight = screenHeight - topInset - 88 - (revealed ? 230 : 80) - bottomInset;
+    // Image fills most of the viewport but leaves enough room so the
+    // ScrollView content is always taller than its container.
+    const cardHeight = Math.min(
+      screenWidth * 0.9,
+      screenHeight - topInset - bottomInset - 260,
+    );
 
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -407,7 +412,7 @@ export default function SpotterScreen() {
         {/* Everything below top bar is scrollable */}
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: bottomInset + 12 }}
+          contentContainerStyle={{ paddingBottom: bottomInset + 40, flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
         >
           {/* Timer bar */}
