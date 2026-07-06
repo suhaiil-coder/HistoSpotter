@@ -371,7 +371,7 @@ export default function SpotterScreen() {
 
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Top bar */}
+        {/* Top bar — always fixed */}
         <View style={[styles.spotTopBar, { paddingTop: topInset + 8 }]}>
           <Pressable onPress={() => { clearTimer(); setSessionState("idle"); }} style={styles.spotBack}>
             <Feather name="x" size={20} color={colors.mutedForeground} />
@@ -404,35 +404,37 @@ export default function SpotterScreen() {
           )}
         </View>
 
-        {/* Timer bar */}
-        {activeTimerDuration.current > 0 && !revealed && (
-          <TimerBar
-            timeLeft={timeLeft}
-            total={activeTimerDuration.current}
-            colors={colors}
-          />
-        )}
-
-        {/* Slide image */}
-        <Animated.View
-          style={[
-            styles.spotCard,
-            { height: cardHeight, opacity: cardOpacity, transform: [{ translateX: cardTranslateX }] },
-          ]}
-        >
-          <Image
-            source={slideImageMap[currentSlide.key]}
-            style={StyleSheet.absoluteFill}
-            contentFit="contain"
-          />
-        </Animated.View>
-
-        {/* Bottom — scrollable so features don't crowd the screen */}
+        {/* Everything below top bar is scrollable */}
         <ScrollView
-          style={[styles.spotBottom]}
+          style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: bottomInset + 12 }}
           showsVerticalScrollIndicator={false}
         >
+          {/* Timer bar */}
+          {activeTimerDuration.current > 0 && !revealed && (
+            <TimerBar
+              timeLeft={timeLeft}
+              total={activeTimerDuration.current}
+              colors={colors}
+            />
+          )}
+
+          {/* Slide image */}
+          <Animated.View
+            style={[
+              styles.spotCard,
+              { height: cardHeight, opacity: cardOpacity, transform: [{ translateX: cardTranslateX }] },
+            ]}
+          >
+            <Image
+              source={slideImageMap[currentSlide.key]}
+              style={StyleSheet.absoluteFill}
+              contentFit="contain"
+            />
+          </Animated.View>
+
+          {/* Bottom content */}
+          <View style={[styles.spotBottom]}>
           {!revealed ? (
             <Pressable style={[styles.revealBtn, { backgroundColor: colors.primary }]} onPress={doReveal}>
               <Feather name="eye" size={18} color="#fff" style={{ marginRight: 10 }} />
@@ -506,6 +508,7 @@ export default function SpotterScreen() {
               </View>
             </Animated.View>
           )}
+          </View>
         </ScrollView>
       </View>
     );
