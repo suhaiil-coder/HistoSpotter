@@ -5,8 +5,9 @@ import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 
+import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 
 function NativeTabLayout() {
@@ -42,6 +43,7 @@ function NativeTabLayout() {
 
 function ClassicTabLayout() {
   const colors = useColors();
+  const { unreadChatCount } = useApp();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
 
@@ -116,12 +118,46 @@ function ClassicTabLayout() {
         name="chat"
         options={{
           title: "Chat",
-          tabBarIcon: ({ color, size }) =>
-            isIOS ? (
-              <SymbolView name="message" tintColor={color} size={size} />
-            ) : (
-              <Feather name="message-circle" size={size} color={color} />
-            ),
+          tabBarIcon: ({ color, size }) => {
+            const hasBadge = unreadChatCount > 0;
+            const badgeSize = Math.min(size * 0.6, 16);
+            return (
+              <View style={{ position: "relative" }}>
+                {isIOS ? (
+                  <SymbolView name="message" tintColor={color} size={size} />
+                ) : (
+                  <Feather name="message-circle" size={size} color={color} />
+                )}
+                {hasBadge && (
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: -3,
+                      right: -6,
+                      minWidth: badgeSize,
+                      height: badgeSize,
+                      borderRadius: badgeSize / 2,
+                      backgroundColor: colors.destructive || "#EF4444",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      paddingHorizontal: 3,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#fff",
+                        fontSize: badgeSize * 0.6,
+                        fontFamily: "Inter_700Bold",
+                        lineHeight: badgeSize * 0.85,
+                      }}
+                    >
+                      {unreadChatCount > 9 ? "9+" : unreadChatCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            );
+          },
         }}
       />
       <Tabs.Screen

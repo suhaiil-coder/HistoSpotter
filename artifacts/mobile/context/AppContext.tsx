@@ -49,6 +49,8 @@ interface AppContextValue {
   saveQuizResult: (result: QuizResult) => void;
   updateSettings: (patch: Partial<AppSettings>) => void;
   resetStats: () => void;
+  unreadChatCount: number;
+  setUnreadChatCount: React.Dispatch<React.SetStateAction<number>>;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -80,6 +82,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [stats, setStats] = useState<AppStats>(DEFAULT_STATS);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [quizHistory, setQuizHistory] = useState<QuizResult[]>([]);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -169,6 +172,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         saveQuizResult,
         updateSettings,
         resetStats,
+        unreadChatCount,
+        setUnreadChatCount,
       }}
     >
       {children}

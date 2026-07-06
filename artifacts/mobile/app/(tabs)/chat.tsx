@@ -1,8 +1,9 @@
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@clerk/expo";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   Platform,
@@ -16,6 +17,7 @@ import {
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useApp } from "@/context/AppContext";
 import { useChatIdentity } from "@/hooks/useChatIdentity";
 import { useColors } from "@/hooks/useColors";
 
@@ -96,6 +98,7 @@ export default function ChatScreen() {
   const { ready, senderId, username, isSignedIn, setGuestName } =
     useChatIdentity();
   const { signOut, getToken } = useAuth();
+  const { setUnreadChatCount } = useApp();
 
   // Keep latest auth accessors available to the WS onopen closure.
   const authRef = useRef<{
@@ -108,6 +111,8 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<ConnStatus>("idle");
+  const [connecting, setConnecting] = useState(false);
+  const isFocusedRef = useRef(true);
 
   const wsRef = useRef<WebSocket | null>(null);
   const listRef = useRef<FlatList<ChatMsg>>(null);
@@ -132,8 +137,10 @@ export default function ChatScreen() {
     const ws = new WebSocket(`${proto}://${domain}/api/chat/ws`);
     wsRef.current = ws;
     setStatus("connecting");
+    setConnecting(true);
     ws.onopen = () => {
       setStatus("connected");
+      setConnecting(false);
       // Prove Clerk identity to the server so `clerk:` senderIds are trusted.
       if (authRef.current.isSignedIn) {
         authRef.current
@@ -150,9 +157,13 @@ export default function ChatScreen() {
     };
     ws.onclose = () => {
       setStatus("disconnected");
+      setConnecting(false);
       reconnectTimer.current = setTimeout(() => connect(name), 4000);
     };
-    ws.onerror = () => setStatus("disconnected");
+    ws.onerror = () => {
+      setStatus("disconnected");
+      setConnecting(false);
+    };
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data as string) as
@@ -168,6 +179,10 @@ export default function ChatScreen() {
         } else if (data.type === "message") {
           setMessages((prev) => [...prev, data.message]);
           setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
+          // Increment unread if not focused and not from self
+          if (!isFocusedRef.current && data.message.senderId !== senderId) {
+            setUnreadChatCount((prev) => prev + 1);
+          }
         } else if (data.type === "delete") {
           setMessages((prev) => prev.filter((m) => m.id !== data.id));
         }
@@ -175,7 +190,7 @@ export default function ChatScreen() {
         // ignore malformed frames
       }
     };
-  }, []);
+  }, [senderId, setUnreadChatCount]);
 
   useEffect(() => {
     if (!username) return;
@@ -188,6 +203,17 @@ export default function ChatScreen() {
       }
     };
   }, [username, connect]);
+
+  // Track when chat is focused to clear unread badge
+  useFocusEffect(
+    useCallback(() => {
+      isFocusedRef.current = true;
+      setUnreadChatCount(0);
+      return () => {
+        isFocusedRef.current = false;
+      };
+    }, [setUnreadChatCount]),
+  );
 
   const saveGuestName = useCallback(() => {
     const trimmed = nameInput.trim().slice(0, MAX_USERNAME);
@@ -251,8 +277,15 @@ export default function ChatScreen() {
         : "Offline";
 
   // ── Loading identity ─────────────────────────────────────────────────
-  if (!ready) {
-    return <View style={[styles.screen, { backgroundColor: colors.background }]} />;
+  if (!ready || connecting) {
+    return (
+      <View style={[styles.screen, { backgroundColor: colors.background, alignItems: "center", justifyContent: "center", gap: 16 }]}>
+        <ActivityIndicator color={colors.primary} size="large" />
+        <Text style={{ color: colors.mutedForeground, fontFamily: "Inter_400Regular", fontSize: 14 }}>
+          Connecting to chat…
+        </Text>
+      </View>
+    );
   }
 
   // ── Guest name picker (only for signed-out users w/o a name) ──────────

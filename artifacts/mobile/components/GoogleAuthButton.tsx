@@ -38,45 +38,73 @@ export function GoogleAuthButton({ onDone }: { onDone?: () => void }) {
   const { startSSOFlow } = useSSO();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const onPress = useCallback(async () => {
     if (busy) return;
     setBusy(true);
+    setError(null);
     try {
-      const { createdSessionId, setActive } = await startSSOFlow({
-        strategy: "oauth_google",
-        redirectUrl: AuthSession.makeRedirectUri(),
-      });
+      const redirectUrl =
+        Platform.OS === "web"
+          ? window.location.origin
+          : AuthSession.makeRedirectUri();
+
+      const { createdSessionId, setActive, signIn, signUp } =
+        await startSSOFlow({
+          strategy: "oauth_google",
+          redirectUrl,
+        });
+
       if (createdSessionId && setActive) {
-        await setActive({ session: createdSessionId });
-        if (onDone) onDone();
-        else router.replace("/(tabs)/chat");
+        await setActive({
+          session: createdSessionId,
+          navigate: async ({ session, decorateUrl }) => {
+            if (session?.currentTask) {
+              console.log("Clerk session task:", session.currentTask);
+              return;
+            }
+            if (onDone) onDone();
+            else router.replace(decorateUrl("/(tabs)/chat") as any);
+          },
+        });
+      } else if (signIn?.status === "needs_identifier" || signUp?.status === "missing_requirements") {
+        setError("Please complete sign-up with email and password.");
       }
-    } catch (err) {
-      console.error("Google SSO error", JSON.stringify(err, null, 2));
+    } catch (err: any) {
+      const msg = err?.errors?.[0]?.message || err?.message || "Google sign-in failed";
+      setError(msg);
+      console.error("Google SSO error:", JSON.stringify(err, null, 2));
     } finally {
       setBusy(false);
     }
   }, [busy, startSSOFlow, router, onDone]);
 
   return (
-    <Pressable
-      style={[
-        styles.btn,
-        { backgroundColor: "#fff", opacity: busy ? 0.7 : 1 },
-      ]}
-      onPress={onPress}
-      disabled={busy}
-    >
-      {busy ? (
-        <ActivityIndicator color="#111" />
-      ) : (
-        <>
-          <GoogleLogo />
-          <Text style={styles.btnTxt}>Continue with Google</Text>
-        </>
+    <View style={{ gap: 8 }}>
+      <Pressable
+        style={[
+          styles.btn,
+          { backgroundColor: "#fff", opacity: busy ? 0.7 : 1 },
+        ]}
+        onPress={onPress}
+        disabled={busy}
+      >
+        {busy ? (
+          <ActivityIndicator color="#111" />
+        ) : (
+          <>
+            <GoogleLogo />
+            <Text style={styles.btnTxt}>Continue with Google</Text>
+          </>
+        )}
+      </Pressable>
+      {error && (
+        <Text style={[styles.error, { color: colors.destructive || "#EF4444" }]}>
+          {error}
+        </Text>
       )}
-    </Pressable>
+    </View>
   );
 }
 
@@ -99,4 +127,5 @@ const styles = StyleSheet.create({
   },
   logoTxt: { color: "#fff", fontSize: 13, fontFamily: "Inter_700Bold" },
   btnTxt: { color: "#111", fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  error: { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center" },
 });
