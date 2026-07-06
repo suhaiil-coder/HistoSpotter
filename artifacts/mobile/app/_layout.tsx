@@ -1,4 +1,3 @@
-import { ClerkProvider } from "@clerk/expo";
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -16,20 +15,15 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider } from "@/context/AppContext";
-import { tokenCache } from "@/lib/clerkTokenCache";
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
-const clerkPublishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
-const clerkProxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
-
 function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="(auth)" options={{ headerShown: false, presentation: "modal" }} />
       <Stack.Screen name="quiz" options={{ headerShown: false, animation: "slide_from_bottom" }} />
       <Stack.Screen name="results" options={{ headerShown: false, animation: "fade" }} />
       <Stack.Screen name="review" options={{ headerShown: false, animation: "slide_from_right" }} />
@@ -55,24 +49,18 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <ClerkProvider
-      publishableKey={clerkPublishableKey}
-      tokenCache={tokenCache}
-      proxyUrl={clerkProxyUrl}
-    >
-      <SafeAreaProvider>
-        <ErrorBoundary>
-          <QueryClientProvider client={queryClient}>
-            <AppProvider>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <KeyboardProvider>
-                  <RootLayoutNav />
-                </KeyboardProvider>
-              </GestureHandlerRootView>
-            </AppProvider>
-          </QueryClientProvider>
-        </ErrorBoundary>
-      </SafeAreaProvider>
-    </ClerkProvider>
+    <SafeAreaProvider>
+      <ErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <AppProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <KeyboardProvider>
+                <RootLayoutNav />
+              </KeyboardProvider>
+            </GestureHandlerRootView>
+          </AppProvider>
+        </QueryClientProvider>
+      </ErrorBoundary>
+    </SafeAreaProvider>
   );
 }

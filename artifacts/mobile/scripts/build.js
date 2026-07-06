@@ -136,15 +136,10 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
 
   console.log("Starting Metro...");
   console.log(`Setting EXPO_PUBLIC_DOMAIN=${expoPublicDomain}`);
-  const clerkProxyUrl = process.env.CLERK_PROXY_URL
-    ? `https://${expoPublicDomain}${process.env.CLERK_PROXY_URL}`
-    : "";
   const env = {
     ...process.env,
     EXPO_PUBLIC_DOMAIN: expoPublicDomain,
     EXPO_PUBLIC_REPL_ID: expoPublicReplId,
-    EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.CLERK_PUBLISHABLE_KEY || "",
-    EXPO_PUBLIC_CLERK_PROXY_URL: clerkProxyUrl,
   };
 
   if (expoPublicReplId) {
@@ -580,9 +575,6 @@ async function buildWebApp() {
 
   const domain = getDeploymentDomain();
   const expoPublicReplId = getExpoPublicReplId();
-  const clerkProxyUrl = process.env.CLERK_PROXY_URL
-    ? `https://${domain}${process.env.CLERK_PROXY_URL}`
-    : "";
 
   return new Promise((resolve, reject) => {
     const webBuild = spawn(
@@ -595,8 +587,6 @@ async function buildWebApp() {
           ...process.env,
           EXPO_PUBLIC_DOMAIN: domain,
           EXPO_PUBLIC_REPL_ID: expoPublicReplId,
-          EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.CLERK_PUBLISHABLE_KEY || "",
-          EXPO_PUBLIC_CLERK_PROXY_URL: clerkProxyUrl,
         },
       },
     );

@@ -1,5 +1,4 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useAuth, useUser } from "@clerk/expo";
 import { useCallback, useEffect, useState } from "react";
 
 const GUEST_NAME_KEY = "histospotter_chat_username";
@@ -19,32 +18,18 @@ export interface ChatIdentity {
   senderId: string | null;
   /** Display name shown in the chat. */
   username: string | null;
-  isSignedIn: boolean;
-  /** Set a guest display name (for users who don't sign in). */
+  /** Set a guest display name. */
   setGuestName: (name: string) => Promise<void>;
 }
 
 /**
  * Resolves the current chat identity.
- * - Signed-in (Clerk) users → senderId `clerk:<id>`, name from their profile.
  * - Guests → persistent `anon:<uuid>` + a chosen display name.
  */
 export function useChatIdentity(): ChatIdentity {
-  const { isLoaded: authLoaded, isSignedIn } = useAuth();
-  const { user } = useUser();
-
   const [anonId, setAnonId] = useState<string | null>(null);
   const [guestName, setGuestNameState] = useState<string | null>(null);
   const [localLoaded, setLocalLoaded] = useState(false);
-  const [authTimedOut, setAuthTimedOut] = useState(false);
-
-  // Auth is optional: never block chat on Clerk. If it hasn't loaded within a
-  // few seconds (misconfig / offline), fall through to guest mode.
-  useEffect(() => {
-    if (authLoaded) return;
-    const t = setTimeout(() => setAuthTimedOut(true), 3000);
-    return () => clearTimeout(t);
-  }, [authLoaded]);
 
   useEffect(() => {
     (async () => {
@@ -78,28 +63,10 @@ export function useChatIdentity(): ChatIdentity {
     }
   }, []);
 
-  const ready = localLoaded && (authLoaded || authTimedOut);
-
-  if (isSignedIn && user) {
-    const name =
-      user.username ||
-      [user.firstName, user.lastName].filter(Boolean).join(" ").trim() ||
-      user.primaryEmailAddress?.emailAddress?.split("@")[0] ||
-      "User";
-    return {
-      ready,
-      senderId: `clerk:${user.id}`,
-      username: name,
-      isSignedIn: true,
-      setGuestName,
-    };
-  }
-
   return {
-    ready,
+    ready: localLoaded,
     senderId: anonId ? `anon:${anonId}` : null,
     username: guestName,
-    isSignedIn: false,
     setGuestName,
   };
 }

@@ -1,6 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { useAuth } from "@clerk/expo";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -89,23 +88,13 @@ function useWebKeyboardOffset(): number {
 export default function ChatScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const topInset = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomInset = insets.bottom || 0;
   const webKbOffset = useWebKeyboardOffset();
   const isWeb = Platform.OS === "web";
 
-  const { ready, senderId, username, isSignedIn, setGuestName } =
-    useChatIdentity();
-  const { signOut, getToken } = useAuth();
+  const { ready, senderId, username, setGuestName } = useChatIdentity();
   const { setUnreadChatCount } = useApp();
-
-  // Keep latest auth accessors available to the WS onopen closure.
-  const authRef = useRef<{
-    isSignedIn: boolean;
-    getToken: () => Promise<string | null>;
-  }>({ isSignedIn: false, getToken: async () => null });
-  authRef.current = { isSignedIn: !!isSignedIn, getToken };
 
   const [nameInput, setNameInput] = useState("");
   const [messages, setMessages] = useState<ChatMsg[]>([]);
@@ -141,19 +130,6 @@ export default function ChatScreen() {
     ws.onopen = () => {
       setStatus("connected");
       setConnecting(false);
-      // Prove Clerk identity to the server so `clerk:` senderIds are trusted.
-      if (authRef.current.isSignedIn) {
-        authRef.current
-          .getToken()
-          .then((token) => {
-            if (token && ws.readyState === 1) {
-              ws.send(JSON.stringify({ type: "auth", token }));
-            }
-          })
-          .catch(() => {
-            // token unavailable — continue without verified identity
-          });
-      }
     };
     ws.onclose = () => {
       setStatus("disconnected");
@@ -251,18 +227,6 @@ export default function ChatScreen() {
     [isWeb, unsend],
   );
 
-  const handleSignOut = useCallback(() => {
-    const doSignOut = () => void signOut();
-    if (isWeb) {
-      if (window.confirm("Sign out of your account?")) doSignOut();
-      return;
-    }
-    Alert.alert("Sign out", "Sign out of your account?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Sign out", style: "destructive", onPress: doSignOut },
-    ]);
-  }, [isWeb, signOut]);
-
   const statusColor =
     status === "connected"
       ? "#22C55E"
@@ -276,7 +240,7 @@ export default function ChatScreen() {
         ? "Connecting…"
         : "Offline";
 
-  // ── Loading identity ─────────────────────────────────────────────────
+  // ── Loading identity ──────────────────────────────────────────────
   if (!ready || connecting) {
     return (
       <View style={[styles.screen, { backgroundColor: colors.background, alignItems: "center", justifyContent: "center", gap: 16 }]}>
@@ -288,7 +252,7 @@ export default function ChatScreen() {
     );
   }
 
-  // ── Guest name picker (only for signed-out users w/o a name) ──────────
+  // ── Guest name picker ────────────────────────────────────────────────
   if (!username) {
     return (
       <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -302,7 +266,7 @@ export default function ChatScreen() {
             Join the Chat
           </Text>
           <Text style={[styles.nameSub, { color: colors.mutedForeground }]}>
-            Pick a display name to jump in as a guest
+            Pick a display name to jump in
           </Text>
           <TextInput
             style={[
@@ -340,25 +304,7 @@ export default function ChatScreen() {
                 { color: nameInput.trim() ? "#fff" : colors.mutedForeground },
               ]}
             >
-              Enter as Guest
-            </Text>
-          </Pressable>
-
-          <View style={styles.dividerRow}>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <Text style={[styles.dividerTxt, { color: colors.mutedForeground }]}>
-              or
-            </Text>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          </View>
-
-          <Pressable
-            style={[styles.signInBtn, { borderColor: colors.border }]}
-            onPress={() => router.push("/(auth)/sign-in")}
-          >
-            <Feather name="log-in" size={16} color={colors.primary} />
-            <Text style={[styles.signInBtnTxt, { color: colors.primary }]}>
-              Sign in for a real identity
+              Enter Chat
             </Text>
           </Pressable>
         </View>
@@ -366,7 +312,7 @@ export default function ChatScreen() {
     );
   }
 
-  // ── Chat room ────────────────────────────────────────────────────────
+  // ── Chat room ──────────────────────────────────────────────────
   const msgBottomPad = isWeb
     ? INPUT_BAR_HEIGHT + webKbOffset + 8
     : bottomInset + 16;
@@ -389,7 +335,6 @@ export default function ChatScreen() {
             Chat
           </Text>
           <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
-            {isSignedIn ? "Signed in as " : "Guest · "}
             <Text style={{ color: colors.primary }}>{username}</Text>
           </Text>
         </View>
@@ -400,23 +345,6 @@ export default function ChatScreen() {
               {statusLabel}
             </Text>
           </View>
-          {isSignedIn ? (
-            <Pressable
-              style={[styles.accountBtn, { borderColor: colors.border }]}
-              onPress={handleSignOut}
-              hitSlop={8}
-            >
-              <Feather name="log-out" size={16} color={colors.mutedForeground} />
-            </Pressable>
-          ) : (
-            <Pressable
-              style={[styles.accountBtn, { borderColor: colors.border }]}
-              onPress={() => router.push("/(auth)/sign-in")}
-              hitSlop={8}
-            >
-              <Feather name="log-in" size={16} color={colors.primary} />
-            </Pressable>
-          )}
         </View>
       </View>
 
@@ -557,131 +485,90 @@ export default function ChatScreen() {
           multiline
           returnKeyType="send"
           blurOnSubmit
-          onSubmitEditing={sendMessage}
         />
         <Pressable
+          onPress={sendMessage}
+          disabled={!input.trim()}
           style={[
             styles.sendBtn,
             {
-              backgroundColor:
-                input.trim() && status === "connected"
-                  ? colors.primary
-                  : colors.secondary,
+              backgroundColor: input.trim()
+                ? colors.primary
+                : colors.secondary,
+              opacity: input.trim() ? 1 : 0.5,
             },
           ]}
-          onPress={sendMessage}
-          disabled={!input.trim() || status !== "connected"}
         >
           <Feather
             name="send"
             size={18}
-            color={
-              input.trim() && status === "connected"
-                ? "#fff"
-                : colors.mutedForeground
-            }
+            color={input.trim() ? "#fff" : colors.mutedForeground}
           />
         </Pressable>
       </View>
     </View>
   );
 
-  // Native: keyboard-controller's KeyboardAvoidingView lifts input smoothly.
-  if (!isWeb) {
-    return (
-      <KeyboardAvoidingView style={styles.kav} behavior="padding">
-        {content}
-      </KeyboardAvoidingView>
-    );
-  }
-
-  return content;
+  return isWeb ? (
+    <KeyboardAvoidingView
+      behavior="padding"
+      keyboardVerticalOffset={0}
+      style={{ flex: 1 }}
+    >
+      {content}
+    </KeyboardAvoidingView>
+  ) : (
+    content
+  );
 }
 
 const styles = StyleSheet.create({
-  kav: { flex: 1 },
   screen: { flex: 1 },
-
-  // Guest picker
   namePicker: {
-    width: "100%",
-    maxWidth: 340,
-    borderRadius: 20,
-    borderWidth: 1,
+    margin: 24,
+    marginTop: "30%",
     padding: 24,
-    gap: 12,
-    alignItems: "stretch",
-    alignSelf: "center",
-    marginTop: "auto",
-    marginBottom: "auto",
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 14,
   },
-  nameTitle: { fontSize: 22, fontFamily: "Inter_700Bold", textAlign: "center" },
+  nameTitle: { fontFamily: "Inter_700Bold", fontSize: 22, textAlign: "center" },
   nameSub: {
-    fontSize: 14,
     fontFamily: "Inter_400Regular",
+    fontSize: 14,
     textAlign: "center",
     marginBottom: 4,
   },
   nameInput: {
+    height: 48,
     borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Inter_500Medium",
+    fontSize: 15,
   },
   nameBtn: {
+    height: 48,
     borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  nameBtnTxt: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginVertical: 4,
-  },
-  divider: { flex: 1, height: 1 },
-  dividerTxt: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  signInBtn: {
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingVertical: 13,
   },
-  signInBtnTxt: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-
-  // Header
+  nameBtnTxt: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 10,
     borderBottomWidth: 1,
   },
-  headerLeft: { flexShrink: 1 },
-  headerTitle: { fontSize: 20, fontFamily: "Inter_700Bold" },
-  headerSub: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 },
+  headerLeft: { gap: 2 },
+  headerTitle: { fontFamily: "Inter_700Bold", fontSize: 20 },
+  headerSub: { fontFamily: "Inter_400Regular", fontSize: 13 },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
   statusRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
-  statusTxt: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
-  accountBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  // Empty
+  statusTxt: { fontFamily: "Inter_600SemiBold", fontSize: 12 },
   empty: {
     flex: 1,
     alignItems: "center",
@@ -689,82 +576,65 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emptyTxt: {
+    fontFamily: "Inter_500Medium",
     fontSize: 14,
-    fontFamily: "Inter_400Regular",
     textAlign: "center",
-    maxWidth: 220,
   },
-
-  // Messages
   list: { flex: 1 },
-  listContent: { paddingHorizontal: 12, paddingTop: 16, gap: 16 },
+  listContent: { paddingHorizontal: 16, paddingTop: 12, gap: 8 },
   msgRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
   msgRowSelf: { flexDirection: "row-reverse" },
   avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 20,
-    flexShrink: 0,
+    marginBottom: 18,
   },
-  avatarSpacer: { width: 34, flexShrink: 0 },
-  avatarTxt: { fontSize: 13, fontFamily: "Inter_700Bold" },
-  msgBody: { flex: 1, gap: 3, alignItems: "flex-start" },
+  avatarSpacer: { width: 32 },
+  avatarTxt: { fontFamily: "Inter_700Bold", fontSize: 13 },
+  msgBody: { maxWidth: "78%", gap: 2 },
   msgBodySelf: { alignItems: "flex-end" },
   senderName: {
-    fontSize: 11,
     fontFamily: "Inter_600SemiBold",
-    marginLeft: 4,
+    fontSize: 12,
     marginBottom: 2,
   },
-  bubble: {
-    maxWidth: "82%",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  bubbleSelf: {
-    borderRadius: 18,
-    borderBottomRightRadius: 4,
-  },
-  bubbleOther: {
-    borderRadius: 18,
-    borderBottomLeftRadius: 4,
-    borderWidth: 1,
-  },
-  bubbleTxt: { fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 20 },
+  bubble: { borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 },
+  bubbleSelf: { borderBottomRightRadius: 4 },
+  bubbleOther: { borderWidth: 1, borderBottomLeftRadius: 4 },
+  bubbleTxt: { fontFamily: "Inter_400Regular", fontSize: 15, lineHeight: 21 },
   timestamp: {
-    fontSize: 10,
     fontFamily: "Inter_400Regular",
-    marginHorizontal: 4,
-    marginTop: 1,
+    fontSize: 11,
+    marginTop: 2,
   },
-
-  // Input bar
   inputBar: {
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "center",
     gap: 8,
     paddingHorizontal: 12,
-    paddingTop: 10,
+    paddingTop: 8,
     borderTopWidth: 1,
   },
   textInput: {
     flex: 1,
-    borderRadius: 20,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    maxHeight: 100,
     minHeight: 44,
+    maxHeight: 120,
+    borderRadius: 22,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontFamily: "Inter_400Regular",
+    fontSize: 15,
+    lineHeight: 20,
+    textAlignVertical: "center",
   },
   sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -1,6 +1,6 @@
 # HistoSpotter
 
-A dark-themed Expo/React Native histology quiz app with a real-time community chat. Users learn by taking spot-diagnosis quizzes and can chat with others; signing in is optional everywhere.
+A dark-themed Expo/React Native histology quiz app with a real-time community chat. Users learn by taking spot-diagnosis quizzes and can chat with others by picking a guest display name — no sign-in required.
 
 ## Run & Operate
 
@@ -24,26 +24,21 @@ A dark-themed Expo/React Native histology quiz app with a real-time community ch
 
 - `artifacts/mobile` — Expo/React Native app (expo-router). Theme via `hooks/useColors`, Inter fonts.
   - `app/(tabs)/chat.tsx` — real-time chat screen (WebSocket, unsend, colored names)
-  - `app/(auth)/` — optional Clerk sign-in / sign-up (custom UI, Google + email/password)
-  - `hooks/useChatIdentity.ts` — resolves chat identity (`clerk:<id>` when signed in, else persistent `anon:<uuid>` + guest name)
-  - `lib/clerkTokenCache.ts` — SecureStore token cache (native only)
-  - `app/_layout.tsx` — wraps app in `ClerkProvider`
+  - `hooks/useChatIdentity.ts` — resolves chat identity (persistent `anon:<uuid>` + guest name)
 - `artifacts/api-server` — Express 5 API + WebSocket
-  - `src/ws/chat.ts` — chat WS: history, broadcast, server-verified identity + owner-only unsend
-  - `src/app.ts` — Clerk server middleware
+  - `src/ws/chat.ts` — chat WS: history, broadcast, owner-only unsend
 - DB schema source of truth: `@workspace/db` (Drizzle). Chat messages table has a `senderId` column.
 
 ## Architecture decisions
 
-- **Auth is optional everywhere.** The app never blocks on Clerk: chat readiness uses a local-load flag plus a ~3s auth timeout fallback, so guest mode works even if Clerk is slow/unavailable.
-- **Chat identity is server-authoritative for signed-in users.** WS upgrades bypass Express middleware, so the client sends its Clerk token over the socket (`{type:"auth",token}`); the server verifies it (`verifyToken`) and forces `clerk:<sub>`. Unverified clients cannot claim a `clerk:` id. Guests use client-supplied `anon:` ids (best-effort, inherently unverifiable).
-- **Unsend authorizes by resolved senderId**, so only the true owner can delete a message for everyone.
+- **No authentication required.** Chat is guest-only: users pick a display name and get a persistent anonymous ID stored in AsyncStorage. No sign-in, no passwords, no OAuth.
+- **Chat identity is client-supplied.** The server accepts the guest's `anon:<uuid>` senderId as-is. Unsend authorizes by exact `senderId` match, so only the same client/browser can delete their own messages.
 - Colored sender names use a stable hash of the display name (WhatsApp-style).
 
 ## Product
 
 - Histology spot-diagnosis quizzes (including a Head & Neck quiz), review, results, saved items, and stats.
-- Real-time community chat: guests pick a display name; optional sign-in (Google or email/password) gives a real identity and enables owner-only unsend.
+- Real-time community chat: guests pick a display name, no sign-in needed. Owner-only unsend via long-press.
 
 ## User preferences
 
@@ -51,9 +46,7 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-- Clerk env is injected via the mobile `dev` script and `build.js` (`EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`, `EXPO_PUBLIC_CLERK_PROXY_URL`). The app must be wrapped in `ClerkProvider` in `app/_layout.tsx` or every `useAuth()`/`useUser()` call throws "useAuth outside ClerkProvider".
 - Ad-hoc WebSocket tests through `localhost:80` have flaky self-echo — use a separate observer connection to verify broadcasts.
-- Required secrets: `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY` (server verifies chat tokens with the secret key).
 
 ## Pointers
 
