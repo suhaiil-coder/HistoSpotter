@@ -16,7 +16,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 
 import { useColors } from "@/hooks/useColors";
-import { ALL_SLIDES, SLIDE_CATEGORIES, slideImageMap, type Slide } from "@/constants/slides";
+import { ALL_SLIDES, SLIDE_CATEGORIES, slideFeaturesMap, slideImageMap, type Slide } from "@/constants/slides";
+import { playCorrect, playTick, playTimeout, playWarning, playWrong } from "@/lib/sound";
 
 type SessionState = "idle" | "spotting" | "done";
 type TimerDuration = 0 | 30 | 60;
@@ -51,8 +52,8 @@ const TIMER_OPTIONS: { label: string; value: TimerDuration }[] = [
   { label: "1 min", value: 60 },
 ];
 
-// Compact circular countdown ring drawn with border arcs
-function TimerRing({
+// Gradient line countdown timer — same style as quiz timer
+function TimerBar({
   timeLeft,
   total,
   colors: c,
@@ -61,19 +62,15 @@ function TimerRing({
   total: number;
   colors: ReturnType<typeof import("@/hooks/useColors").useColors>;
 }) {
-  const SIZE = 38;
   const fraction = total > 0 ? timeLeft / total : 0;
   const urgent = timeLeft <= 5;
-  const warning = timeLeft <= 10;
-  const ringColor = urgent ? "#EF4444" : warning ? "#F97316" : c.primary;
 
-  // Animate the color via opacity layers
   const pulseAnim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     if (urgent && timeLeft > 0) {
       Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 0.3, duration: 400, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 0.5, duration: 400, useNativeDriver: true }),
           Animated.timing(pulseAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
         ])
       ).start();
@@ -84,20 +81,26 @@ function TimerRing({
   }, [urgent, timeLeft]);
 
   return (
-    <Animated.View
-      style={[
-        styles.timerRing,
-        {
-          width: SIZE,
-          height: SIZE,
-          borderRadius: SIZE / 2,
-          borderColor: ringColor,
-          opacity: pulseAnim,
-        },
-      ]}
-    >
-      <Text style={[styles.timerTxt, { color: ringColor }]}>{timeLeft}</Text>
-    </Animated.View>
+    <View style={[styles.timerTrack, { backgroundColor: c.border }]}>
+      <Animated.View
+        style={[
+          styles.timerBarContainer,
+          { width: `${fraction * 100}%`, opacity: pulseAnim },
+        ]}
+      >
+        <LinearGradient
+          colors={["#22C55E", "#FBBF24", "#F97316", "#EF4444"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+      {total > 0 && (
+        <Text style={[styles.barTimerLabel, { color: c.mutedForeground }]}>
+          {timeLeft}s
+        </Text>
+      )}
+    </View>
   );
 }
 
@@ -117,6 +120,7 @@ export default function SpotterScreen() {
   const [deck, setDeck] = useState<Slide[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
+  const [showFeatures, setShowFeatures] = useState(false);
   const [correct, setCorrect] = useState(0);
   const [missed, setMissed] = useState(0);
   const [missedSlides, setMissedSlides] = useState<Slide[]>([]);
@@ -150,6 +154,7 @@ export default function SpotterScreen() {
   const doReveal = useCallback(() => {
     clearTimer();
     setRevealed(true);
+    setShowFeatures(false);
     Animated.spring(revealAnim, {
       toValue: 1,
       useNativeDriver: true,
@@ -167,11 +172,19 @@ export default function SpotterScreen() {
     clearTimer();
     if (duration === 0) return;
     setTimeLeft(duration);
+    let remaining = duration;
     intervalRef.current = setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 5 && remaining > 0) {
+        playWarning();
+      } else if (remaining > 0) {
+        playTick();
+      }
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(intervalRef.current!);
           intervalRef.current = null;
+          playTimeout();
           // Auto-reveal when time runs out
           doRevealRef.current();
           return 0;
@@ -211,10 +224,12 @@ export default function SpotterScreen() {
       const slide = deck[currentIndex];
       if (gotIt) {
         setCorrect((c) => c + 1);
+        playCorrect();
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
         setMissed((m) => m + 1);
         setMissedSlides((prev) => [...prev, slide]);
+        playWrong();
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
 
@@ -232,6 +247,7 @@ export default function SpotterScreen() {
         cardAnim.setValue(0);
         revealAnim.setValue(0);
         setRevealed(false);
+        setShowFeatures(false);
         setCurrentIndex(next);
       });
     },
@@ -378,11 +394,24 @@ export default function SpotterScreen() {
             <Text style={[styles.scoreNum, { color: colors.destructive }]}>{missed}</Text>
           </View>
 
-          {/* Timer ring — only shown when timer is active and not revealed */}
+          {/* Timer — only shown when timer is active and not revealed */}
           {activeTimerDuration.current > 0 && !revealed && (
-            <TimerRing timeLeft={timeLeft} total={activeTimerDuration.current} colors={colors} />
+            <View style={{ minWidth: 48, alignItems: "center" }}>
+              <Text style={[styles.timerCount, { color: timeLeft <= 5 ? "#EF4444" : timeLeft <= 10 ? "#F97316" : colors.primary }]}>
+                {timeLeft}s
+              </Text>
+            </View>
           )}
         </View>
+
+        {/* Timer bar */}
+        {activeTimerDuration.current > 0 && !revealed && (
+          <TimerBar
+            timeLeft={timeLeft}
+            total={activeTimerDuration.current}
+            colors={colors}
+          />
+        )}
 
         {/* Slide image */}
         <Animated.View
@@ -422,7 +451,40 @@ export default function SpotterScreen() {
                 <Text style={[styles.catTxt, { color: catColor }]}>{currentSlide.category}</Text>
               </View>
               <Text style={[styles.answerName, { color: colors.foreground }]}>{currentSlide.name}</Text>
-              <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
+
+              {/* Identifying Features toggle */}
+              {slideFeaturesMap[currentSlide.key] && (
+                <Pressable
+                  onPress={() => setShowFeatures((s) => !s)}
+                  style={[
+                    styles.featuresToggle,
+                    { borderColor: colors.border, backgroundColor: colors.secondary },
+                  ]}
+                >
+                  <Feather
+                    name={showFeatures ? "chevron-up" : "chevron-down"}
+                    size={14}
+                    color={colors.primary}
+                  />
+                  <Text style={[styles.featuresToggleTxt, { color: colors.primary }]}>
+                    {showFeatures ? "Hide Identifying Features" : "Show Identifying Features"}
+                  </Text>
+                </Pressable>
+              )}
+
+              {/* Features list */}
+              {showFeatures && slideFeaturesMap[currentSlide.key] && (
+                <View style={[styles.featuresBox, { borderColor: colors.border }]}>
+                  {slideFeaturesMap[currentSlide.key].map((feat, i) => (
+                    <View key={i} style={styles.featureRow}>
+                      <View style={[styles.featureDot, { backgroundColor: colors.primary }]} />
+                      <Text style={[styles.featureTxt, { color: colors.foreground }]}>{feat}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
                 <Pressable
                   style={[styles.voteBtn, { backgroundColor: "#EF444420", borderColor: "#EF4444" }]}
                   onPress={() => advance(false)}
@@ -616,12 +678,32 @@ const styles = StyleSheet.create({
   scoreSep: { fontSize: 13, fontFamily: "Inter_400Regular" },
 
   // Timer ring
-  timerRing: {
-    borderWidth: 2.5,
+  timerCount: { fontSize: 13, fontFamily: "Inter_700Bold" },
+  timerTrack: {
+    height: 4,
+    marginHorizontal: 20,
+    marginTop: 4,
+    borderRadius: 2,
+    overflow: "hidden",
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-end",
+    position: "relative",
   },
-  timerTxt: { fontSize: 13, fontFamily: "Inter_700Bold" },
+  timerBarContainer: {
+    height: 4,
+    borderRadius: 2,
+    overflow: "hidden",
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+  barTimerLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    marginLeft: 8,
+  },
 
   // Spotting card
   spotCard: { marginHorizontal: 16, borderRadius: 20, overflow: "hidden", backgroundColor: "#111" },
@@ -660,6 +742,29 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   voteTxt: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  featuresToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 2,
+    alignSelf: "center",
+  },
+  featuresToggleTxt: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  featuresBox: {
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 12,
+    gap: 8,
+    marginTop: 2,
+  },
+  featureRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  featureDot: { width: 5, height: 5, borderRadius: 2.5, marginTop: 7 },
+  featureTxt: { fontSize: 12, fontFamily: "Inter_400Regular", flex: 1, lineHeight: 18 },
 
   // Done
   donePct: { fontSize: 72, fontFamily: "Inter_700Bold", letterSpacing: -2 },

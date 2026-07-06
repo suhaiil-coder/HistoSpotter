@@ -85,6 +85,294 @@ export const SLIDE_CATEGORIES = [
   "Special Senses",
 ];
 
+/** Identifying features for each histology slide (minimum identifying features). */
+export const slideFeaturesMap: Record<string, string[]> = {
+  hyaline_cartilage: [
+    "Presence of perichondrium – fibrous and cellular layer",
+    "Chondrocytes in cell nests within lacuna",
+    "Homogenous matrix with metachromasia (Territorial and interterritorial matrix)",
+  ],
+  elastic_cartilage: [
+    "Presence of perichondrium – fibrous and cellular layer",
+    "Large chondrocytes within lacuna arranged singularly",
+    "Elastic fibres within the matrix",
+  ],
+  elastic_cartilage_2: [
+    "Presence of perichondrium – fibrous and cellular layer",
+    "Large chondrocytes within lacuna arranged singularly",
+    "Elastic fibres within the matrix",
+  ],
+  fibrocartilage: [
+    "Absence of perichondrium",
+    "Chondrocytes arranged in linear manner between parallel bundles of collagen fibres",
+  ],
+  bone_transverse: [
+    "Haversian system with central Haversian Canal",
+    "Osteocytes in lacunae arranged in between concentric, interstitial and circumferential lamellae and connected by canaliculi between lamellae",
+  ],
+  bone_longitudinal: [
+    "Longitudinal sections of Haversian and Volkmann's canal seen",
+    "Osteocytes in lacunae arranged parallel to Haversian canal",
+  ],
+  skeletal_muscle: [
+    "Unbranched long fibres with dark & light cross striations",
+    "Syncytium, sarcoplasm with peripheral flattened nucleus",
+  ],
+  cardiac_muscle: [
+    "Branched fibres with faint cross striations",
+    "Central ovoid nucleus with intercalated discs separating adjacent myocytes",
+  ],
+  elastic_artery: [
+    "Tunica intima, Tunica media and Tunica adventitia",
+    "Prominent Tunica media containing abundant elastic fibres arranged in a concentric manner",
+  ],
+  muscular_artery: [
+    "Tunica intima, Tunica media and Tunica adventitia",
+    "Prominent Tunica media with smooth muscle cells arranged in a concentric manner",
+    "Prominent internal elastic lamina",
+  ],
+  large_vein: [
+    "Tunica intima, Tunica media and Tunica adventitia",
+    "Prominent Tunica adventitia with longitudinally arranged smooth muscle fibres",
+  ],
+  sensory_ganglia: [
+    "Large round to ovoid cell bodies of pseudounipolar neurons arranged in groups separated by bundles of myelinated nerve fibres",
+    "Numerous satellite cells surrounding each nerve cell",
+  ],
+  sensory_ganglia_2: [
+    "Large round to ovoid cell bodies of pseudounipolar neurons arranged in groups separated by bundles of myelinated nerve fibres",
+    "Numerous satellite cells surrounding each nerve cell",
+  ],
+  autonomic_ganglia: [
+    "Small, irregular multipolar cell bodies with eccentrically placed nucleus scattered in between thin unmyelinated nerve fibres",
+    "Few satellite cells",
+  ],
+  autonomic_ganglia_2: [
+    "Small, irregular multipolar cell bodies with eccentrically placed nucleus scattered in between thin unmyelinated nerve fibres",
+    "Few satellite cells",
+  ],
+  thin_skin: [
+    "Epidermis lined by stratified squamous keratinized epithelium",
+    "Numerous hair follicles, sebaceous glands and arrectores pilorum",
+    "Papillary and reticular layer of Dermis",
+  ],
+  thick_skin: [
+    "Epidermis lined by stratified squamous keratinized epithelium with prominent Stratum Corneum and Lucidum",
+    "Absence of hair follicles",
+    "Papillary and reticular layer of Dermis",
+  ],
+  lymph_node: [
+    "Capsule with subcapsular sinus",
+    "Dark staining outer cortex with lymphocytes arranged in the form of lymphatic nodules with pale staining germinal centre and inner medulla",
+    "Pale staining inner medulla with lymphocytes arranged in form of Medullary sinus",
+  ],
+  lymph_node_2: [
+    "Capsule with subcapsular sinus",
+    "Dark staining outer cortex with lymphocytes arranged in the form of lymphatic nodules with pale staining germinal centre and inner medulla",
+    "Pale staining inner medulla with lymphocytes arranged in form of Medullary sinus",
+  ],
+  thymus: [
+    "Incomplete lobulation with lymphocytes arranged as outer cortex and inner medulla",
+    "Hassall's corpuscle in medulla",
+  ],
+  thymus_2: [
+    "Incomplete lobulation with lymphocytes arranged as outer cortex and inner medulla",
+    "Hassall's corpuscle in medulla",
+  ],
+  tonsil: [
+    "Tonsillar crypts lined by stratified squamous nonkeratinised epithelium",
+    "Lymphocytes arranged in the form of nodules",
+  ],
+  tonsil_2: [
+    "Tonsillar crypts lined by stratified squamous nonkeratinised epithelium",
+    "Lymphocytes arranged in the form of nodules",
+  ],
+  spleen: [
+    "Lymphocytes arranged as red pulp and white pulp",
+    "Red pulp with lymphocytes and Red blood corpuscles interspersed",
+    "White pulp with lymphocytes arranged around eccentrically placed arteriole",
+  ],
+  placenta: [
+    "Sections of irregular chorionic villi, lined by cytotrophoblast and syncytiotrophoblast",
+    "Maternal RBC in intervillous space",
+    "Hofbauer cells seen",
+  ],
+  umbilical_cord: [
+    "Core of mucoid connective tissue (Wharton's jelly) covered by amnion",
+    "Section of two umbilical arteries and one umbilical vein",
+  ],
+  mucous_salivary_gland: [
+    "Mucous acini of various shapes, large lumen, lined by columnar cells having pale foamy cytoplasm, flat basal nuclei",
+    "Inter lobular, Intralobular and intercalated ducts lined by columnar, cuboidal and squamous epithelium",
+  ],
+  serous_salivary_gland: [
+    "Rounded serous acini, small lumen, pyramidal cells with centrally placed rounded nuclei bipolar staining cytoplasm, basal basophilia and apical eosinophilia",
+    "Inter lobular, Intralobular and intercalated ducts lined by columnar, cuboidal and squamous epithelium",
+  ],
+  mixed_salivary_gland: [
+    "Lobes made up of serous and mucous acini",
+    "Crescent shaped groups of serous cells capping the mucous acini (Demilunes of Heidenhain or crescents of Gianuzzi)",
+  ],
+  mixed_salivary_gland_2: [
+    "Lobes made up of serous and mucous acini",
+    "Crescent shaped groups of serous cells capping the mucous acini (Demilunes of Heidenhain or crescents of Gianuzzi)",
+  ],
+  liver: [
+    "Hepatic lobule with central vein and hepatocytes radiating from it. Hepatocytes separated by sinusoids",
+    "Portal triad with cut sections of portal vein, hepatic artery, bile duct",
+  ],
+  gall_bladder: [
+    "Mucosa, fibromuscular coat, serosa",
+    "Simple tall columnar epithelium with microvilli",
+    "Smooth muscle fibres interspersed with elastic fibres are seen in the fibromuscular coat",
+  ],
+  tongue: [
+    "Lining epithelium is stratified squamous non-keratinised",
+    "Presence of papillae – Filiform, fungi form and circumvallate papillae",
+    "Central core of fibromuscular glandular tissue",
+  ],
+  tongue_2: [
+    "Lining epithelium is stratified squamous non-keratinised",
+    "Presence of papillae – Filiform, fungi form and circumvallate papillae",
+    "Central core of fibromuscular glandular tissue",
+  ],
+  esophagus: [
+    "Mucosa, submucosa, muscularis externa & adventitia",
+    "Mucosa lined by nonkeratinised stratified squamous epithelium thrown into folds",
+    "Prominent submucosa with tubuloacinar mucous glands",
+  ],
+  esophagus_2: [
+    "Mucosa, submucosa, muscularis externa & adventitia",
+    "Mucosa lined by nonkeratinised stratified squamous epithelium thrown into folds",
+    "Prominent submucosa with tubuloacinar mucous glands",
+  ],
+  stomach_fundus: [
+    "Mucosa, submucosa, muscularis externa and serosa",
+    "Mucosa – lined by simple columnar epithelium, gastric pits extending into 1/4th of the mucosa, Lamina propria with numerous gastric glands – Acidophilic parietal cells and basophilic chief cells seen",
+  ],
+  stomach_fundus_2: [
+    "Mucosa, submucosa, muscularis externa and serosa",
+    "Mucosa – lined by simple columnar epithelium, gastric pits extending into 1/4th of the mucosa, Lamina propria with numerous gastric glands – Acidophilic parietal cells and basophilic chief cells seen",
+  ],
+  stomach_pylorus: [
+    "Mucosa, submucosa, muscularis externa and serosa",
+    "Mucosa – lined by simple columnar epithelium with gastric pits extending into 1/2 of the mucosa, Pyloric mucous glands are seen in lamina propria",
+  ],
+  duodenum: [
+    "Mucosa, Submucosa, Muscularis externa and serosa",
+    "Mucosa – finger like villi lined by columnar cells with striated border and goblet cells",
+    "Mucous Brunner's glands in submucosa",
+  ],
+  duodenum_2: [
+    "Mucosa, Submucosa, Muscularis externa and serosa",
+    "Mucosa – finger like villi lined by columnar cells with striated border and goblet cells",
+    "Mucous Brunner's glands in submucosa",
+  ],
+  jejunum: [
+    "Mucosa, Submucosa, Muscularis externa and serosa",
+    "Mucosa – leaf like villi lined by columnar cells with striated border and goblet cells",
+    "Featureless submucosa",
+  ],
+  ileum: [
+    "Mucosa, Submucosa, Muscularis externa and serosa",
+    "Rudimentary villi lined by columnar cells with striated border and goblet cells",
+    "Peyer's patches – lymphoid aggregates",
+  ],
+  appendix: [
+    "Small lumen with Mucosa, Submucosa, Muscularis externa and serosa",
+    "Crypts of Lieberkuhn lined by simple columnar epithelium with goblet cells",
+    "Lamina propria – lymphoid aggregates",
+  ],
+  appendix_2: [
+    "Small lumen with Mucosa, Submucosa, Muscularis externa and serosa",
+    "Crypts of Lieberkuhn lined by simple columnar epithelium with goblet cells",
+    "Lamina propria – lymphoid aggregates",
+  ],
+  large_intestine: [
+    "Mucosa, Submucosa, Muscularis externa and serosa",
+    "Absence of intestinal villi",
+    "Crypts of Lieberkuhn with numerous goblet cells",
+  ],
+  kidney: [
+    "Capsule, cortex, medulla",
+    "Cortex shows sections of renal corpuscles, darkly stained PCT (small lumen, lined by a single layer of large cuboidal cells with eosinophilic granular cytoplasm and brush borders) and pale stained DCT (larger lumen lined by smaller cuboidal cells)",
+    "Medulla shows collecting tubules and ducts and Loop of Henle (Thin – simple squamous epithelium, thick – simple cuboidal epithelium)",
+  ],
+  fallopian_tube: [
+    "Mucous, muscular, serous coat",
+    "Mucosa thrown into complex folds – primary secondary & tertiary – lined by ciliated simple columnar epithelium",
+  ],
+  ovary: [
+    "Cuboidal germinal epithelium with inner Tunica albuginea",
+    "Outer cortex with numerous ovarian follicles in various stages of development (primordial, primary, secondary, tertiary, mature)",
+    "Medulla – stroma of irregular connective tissue with blood vessels",
+  ],
+  uterus_proliferative: [
+    "Endometrium, myometrium, perimetrium",
+    "Endometrium lined by simple columnar epithelium with long straight tubular glands",
+    "Myometrium shows thick layer of smooth muscle fibre bundles interlacing in many directions and connective tissue",
+  ],
+  lung: [
+    "Alveoli lined by simple squamous epithelium",
+    "Bronchus lined by pseudostratified ciliated columnar epithelium surrounded by irregular cartilage plates and lamina propria with serous and mucous acini",
+    "Bronchiole lined by low cuboidal or pseudostratified ciliated columnar epithelium surrounded by prominent smooth muscle fibres, cartilage plates are absent",
+  ],
+  trachea: [
+    "Mucosa, submucosa, hyaline cartilage and adventitia",
+    "Mucosa lined by pseudostratified ciliated columnar epithelium with goblet cells",
+    "Hyaline cartilage as C shaped rings with trachealis (smooth) muscle at places where cartilage is absent",
+  ],
+  suprarenal_gland: [
+    "Outer cortex, inner medulla with numerous sinusoids",
+    "Cortex has 3 zones – zona glomerulosa, zona fasciculata and zona reticularis",
+    "Medulla shows large chromaffin cells and sympathetic ganglion cells",
+  ],
+  mammary_gland: [
+    "Tubuloalveolar glands and connective tissue stroma",
+    "Glandular elements minimal, lined by simple cuboid epithelium",
+    "Abundant stroma consists of adipose tissue, fibroblasts",
+  ],
+  pituitary_gland: [
+    "Pars anterior showing chromophils (acidophils and basophils), chromophobes and sinusoids",
+    "Pars posterior showing nerve fibres and pituicytes",
+    "Pars intermedia shows colloid filled follicles",
+  ],
+  cornea: [
+    "Stratified squamous nonkeratinised epithelium with anterior limiting membrane – Bowman's membrane",
+    "Corneal stroma or substantia propria consisting of special collagen fibres and corneal corpuscles",
+    "Descemet's membrane (posterior limiting membrane) with corneal endothelium lined by low cuboidal cells",
+  ],
+  retina: [
+    "10 layers from outer to inner:",
+    "1. Pigment epithelium  2. Layer of Rods & Cones  3. Outer limiting membrane  4. Outer nuclear layer",
+    "5. Outer plexiform layer  6. Inner nuclear layer  7. Inner plexiform layer  8. Ganglion cell layer",
+    "9. Optic nerve fibre layer  10. Inner limiting membrane",
+  ],
+  cerebrum: [
+    "Outer gray matter (cortex) and inner white matter",
+    "Cortex shows 6 layers (superficial to deep): Molecular layer, Outer granular layer, Pyramidal cell layer, Inner granular layer, Ganglionic layer, Polymorphous layer",
+  ],
+  testis: [
+    "Outer Tunica albuginea",
+    "Sections of seminiferous tubules lined by spermatogenic cells and supportive Sertoli cells",
+    "Interstitial cells of Leydig seen in between",
+  ],
+  testis_2: [
+    "Outer Tunica albuginea",
+    "Sections of seminiferous tubules lined by spermatogenic cells and supportive Sertoli cells",
+    "Interstitial cells of Leydig seen in between",
+  ],
+  epididymis: [
+    "Tubules lined by pseudostratified ciliated columnar epithelium with stereocilia with clumps of spermatozoa within lumen",
+    "Circularly arranged smooth muscle fibres and connective tissue around each tubule",
+  ],
+  vas_deferens: [
+    "Mucosa, muscular layer, adventitia",
+    "Mucosa thrown into folds lined by pseudostratified columnar epithelium",
+    "Thick muscular coat with 3 layers – outer & inner longitudinal, middle circular",
+  ],
+};
+
 export const slideImageMap: Record<string, any> = {
   skeletal_muscle: require("../assets/images/slides/skeletal_muscle.jpg"),
   cardiac_muscle: require("../assets/images/slides/cardiac_muscle.jpg"),
