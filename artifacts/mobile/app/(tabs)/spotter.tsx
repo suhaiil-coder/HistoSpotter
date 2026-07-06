@@ -427,8 +427,12 @@ export default function SpotterScreen() {
           />
         </Animated.View>
 
-        {/* Bottom */}
-        <View style={[styles.spotBottom, { paddingBottom: bottomInset + 12 }]}>
+        {/* Bottom — scrollable so features don't crowd the screen */}
+        <ScrollView
+          style={[styles.spotBottom]}
+          contentContainerStyle={{ paddingBottom: bottomInset + 12 }}
+          showsVerticalScrollIndicator={false}
+        >
           {!revealed ? (
             <Pressable style={[styles.revealBtn, { backgroundColor: colors.primary }]} onPress={doReveal}>
               <Feather name="eye" size={18} color="#fff" style={{ marginRight: 10 }} />
@@ -502,7 +506,7 @@ export default function SpotterScreen() {
               </View>
             </Animated.View>
           )}
-        </View>
+        </ScrollView>
       </View>
     );
   }
