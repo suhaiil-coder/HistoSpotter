@@ -565,8 +565,64 @@ async function main() {
 
   if (metroProcess) {
     metroProcess.kill();
+    metroProcess = null;
   }
+
+  await buildWebApp();
+
+  console.log("Build complete! Deploy to:", baseUrl);
   process.exit(0);
+}
+
+async function buildWebApp() {
+  console.log("Building Expo web export...");
+  const outputDir = path.join(projectRoot, "static-build", "web");
+
+  const domain = getDeploymentDomain();
+  const expoPublicReplId = getExpoPublicReplId();
+  const clerkProxyUrl = process.env.CLERK_PROXY_URL
+    ? `https://${domain}${process.env.CLERK_PROXY_URL}`
+    : "";
+
+  return new Promise((resolve, reject) => {
+    const webBuild = spawn(
+      "pnpm",
+      ["exec", "expo", "export", "--platform", "web", "--output-dir", outputDir],
+      {
+        stdio: ["ignore", "pipe", "pipe"],
+        cwd: projectRoot,
+        env: {
+          ...process.env,
+          EXPO_PUBLIC_DOMAIN: domain,
+          EXPO_PUBLIC_REPL_ID: expoPublicReplId,
+          EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY: process.env.CLERK_PUBLISHABLE_KEY || "",
+          EXPO_PUBLIC_CLERK_PROXY_URL: clerkProxyUrl,
+        },
+      },
+    );
+
+    if (webBuild.stdout) {
+      webBuild.stdout.on("data", (data) => {
+        const out = data.toString().trim();
+        if (out) console.log(`[Web] ${out}`);
+      });
+    }
+    if (webBuild.stderr) {
+      webBuild.stderr.on("data", (data) => {
+        const out = data.toString().trim();
+        if (out) console.error(`[Web] ${out}`);
+      });
+    }
+
+    webBuild.on("close", (code) => {
+      if (code === 0) {
+        console.log("Web export complete");
+        resolve();
+      } else {
+        reject(new Error(`expo export --platform web failed (exit ${code})`));
+      }
+    });
+  });
 }
 
 main().catch((error) => {

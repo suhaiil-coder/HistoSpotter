@@ -115,7 +115,9 @@ export default function ChatScreen() {
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const connect = useCallback((name: string) => {
-    const domain = process.env.EXPO_PUBLIC_DOMAIN;
+    const domain =
+      process.env.EXPO_PUBLIC_DOMAIN ||
+      (Platform.OS === "web" ? location.host : undefined);
     if (!domain) return;
     if (wsRef.current) {
       wsRef.current.onclose = null;
