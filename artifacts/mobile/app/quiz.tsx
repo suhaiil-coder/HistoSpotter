@@ -18,6 +18,7 @@ import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 import { QuizAnswer, QuizResult } from "@/context/AppContext";
 import { ALL_QUESTIONS, imageMap } from "@/constants/questions";
+import { playCorrect, playTick, playTimeout, playWarning, playWrong } from "@/lib/sound";
 
 function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -45,6 +46,8 @@ export default function QuizScreen() {
   const timerAnim = useRef(new Animated.Value(1)).current;
   const timerRef = useRef<ReturnType<typeof Animated.timing> | null>(null);
   const autoAdvanceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastTickRef = useRef(0);
 
   const question = questions[currentIndex];
   const progress = (currentIndex + 1) / questions.length;
@@ -95,16 +98,36 @@ export default function QuizScreen() {
     timerAnim.setValue(1);
     if (timerRef.current) timerRef.current.stop();
     if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+    if (tickRef.current) clearInterval(tickRef.current);
 
     if (settings.timerEnabled) {
+      const totalMs = settings.timePerQuestion * 1000;
       const anim = Animated.timing(timerAnim, {
         toValue: 0,
-        duration: settings.timePerQuestion * 1000,
+        duration: totalMs,
         useNativeDriver: false,
       });
       timerRef.current = anim;
+
+      lastTickRef.current = totalMs;
+      tickRef.current = setInterval(() => {
+        lastTickRef.current -= 1000;
+        if (lastTickRef.current <= 0) {
+          clearInterval(tickRef.current!);
+          tickRef.current = null;
+          return;
+        }
+        if (lastTickRef.current <= 5000) {
+          playWarning();
+        } else {
+          playTick();
+        }
+      }, 1000);
+
       anim.start(({ finished }) => {
         if (finished) {
+          if (tickRef.current) clearInterval(tickRef.current);
+          playTimeout();
           if (settings.hapticsEnabled) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           }
@@ -118,6 +141,7 @@ export default function QuizScreen() {
     return () => {
       if (timerRef.current) timerRef.current.stop();
       if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+      if (tickRef.current) clearInterval(tickRef.current);
     };
   }, [currentIndex]);
 
@@ -126,11 +150,17 @@ export default function QuizScreen() {
 
     if (timerRef.current) timerRef.current.stop();
     if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+    if (tickRef.current) clearInterval(tickRef.current);
 
     setSelectedIndex(index);
     setAnswered(true);
 
     const correct = index === question.correctIndex;
+    if (correct) {
+      playCorrect();
+    } else {
+      playWrong();
+    }
     if (settings.hapticsEnabled) {
       if (correct) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -165,10 +195,6 @@ export default function QuizScreen() {
     outputRange: ["0%", "100%"],
   });
 
-  const timerBarColor = timerAnim.interpolate({
-    inputRange: [0, 0.3, 0.6, 1],
-    outputRange: [colors.destructive, colors.warning, colors.primary, colors.primary],
-  });
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -196,15 +222,22 @@ export default function QuizScreen() {
         />
       </View>
 
-      {/* Timer Bar */}
+      {/* Timer Bar — gradient line that depletes right-to-left */}
       {settings.timerEnabled && (
-        <View style={[styles.timerBg, { backgroundColor: colors.border }]}>
+        <View style={[styles.timerTrack, { backgroundColor: colors.border }]}>
           <Animated.View
             style={[
-              styles.timerFill,
-              { width: timerBarWidth, backgroundColor: timerBarColor as any },
+              styles.timerBarContainer,
+              { width: timerBarWidth },
             ]}
-          />
+          >
+            <LinearGradient
+              colors={["#22C55E", "#FBBF24", "#F97316", "#EF4444"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
         </View>
       )}
 
@@ -298,16 +331,20 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 2,
   },
-  timerBg: {
-    height: 3,
+  timerTrack: {
+    height: 4,
     marginHorizontal: 20,
-    marginTop: 4,
+    marginTop: 6,
     borderRadius: 2,
     overflow: "hidden",
+    flexDirection: "row",
+    justifyContent: "flex-end",
   },
-  timerFill: {
-    height: 3,
+  timerBarContainer: {
+    height: 4,
     borderRadius: 2,
+    overflow: "hidden",
+    position: "relative",
   },
   imageContainer: {
     marginTop: 12,
