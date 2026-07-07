@@ -1,14 +1,18 @@
-# Prevent Vercel from auto-detecting serverless functions
-artifacts/api-server/
-lib/
-scripts/
+# Exclude the backend API server (not deployed to Vercel)
+/artifacts/api-server/
+
+# Exclude workspace-level shared libraries (not needed for web build)
+/lib/
+
+# Exclude scripts package
+/scripts/
 
 # Build artifacts
 *.tsbuildinfo
-static-build/
-medspotter-vercel/
-medspotter-vercel.zip
+/static-build/
+/medspotter-vercel/
+/medspotter-vercel.zip
 
-# Replit
-.cache/
-.local/
+# Replit internals
+/.cache/
+/.local/
