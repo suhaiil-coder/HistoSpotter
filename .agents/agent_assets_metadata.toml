@@ -53,3 +53,9 @@ id = "94NV8f3RBIIbXEYx6N3Bm"
 uri = "file://artifacts/mobile/assets/images/trophy.png"
 type = "image"
 title = "Cropped Golden Cup"
+
+[[outputs]]
+id = "WPDmPrwHsNkG_5Wa4p6cl"
+uri = "file://medspotter-vercel.zip"
+type = "unspecified"
+title = "MedSpotter Vercel Deploy Package"
