@@ -1,0 +1,14 @@
+# Prevent Vercel from auto-detecting serverless functions
+artifacts/api-server/
+lib/
+scripts/
+
+# Build artifacts
+*.tsbuildinfo
+static-build/
+medspotter-vercel/
+medspotter-vercel.zip
+
+# Replit
+.cache/
+.local/

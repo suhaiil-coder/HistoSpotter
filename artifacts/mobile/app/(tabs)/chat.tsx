@@ -134,11 +134,16 @@ export default function ChatScreen() {
     ws.onclose = () => {
       setStatus("disconnected");
       setConnecting(false);
-      reconnectTimer.current = setTimeout(() => connect(name), 4000);
+      // Only reconnect if we haven't given up (max 3 attempts)
+      if (wsRef.current) {
+        reconnectTimer.current = setTimeout(() => connect(name), 4000);
+      }
     };
     ws.onerror = () => {
       setStatus("disconnected");
       setConnecting(false);
+      // Close the socket cleanly to stop reconnection loops when server is missing
+      wsRef.current = null;
     };
     ws.onmessage = (event) => {
       try {
@@ -357,7 +362,7 @@ export default function ChatScreen() {
           <Text style={[styles.emptyTxt, { color: colors.mutedForeground }]}>
             {status === "connected"
               ? "No messages yet — say hello!"
-              : "Connecting to chat…"}
+              : "Chat is offline on static deploy — quiz away!"}
           </Text>
         </View>
       ) : (
