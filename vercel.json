@@ -1,5 +1,4 @@
 {
-  "_comment": "Vercel config lives at artifacts/mobile/vercel.json. Set Root Directory to 'artifacts/mobile' in Vercel project settings.",
   "version": 2,
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
