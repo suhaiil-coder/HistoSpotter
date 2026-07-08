@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
@@ -14,6 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useApp } from "@/context/AppContext";
+import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 
 const TIME_OPTIONS = [15, 30, 60] as const;
@@ -39,10 +41,7 @@ function SegmentedControl<T extends number>({
           <Pressable
             key={opt}
             onPress={() => onChange(opt)}
-            style={[
-              styles.segment,
-              active && { backgroundColor: colors.primary },
-            ]}
+            style={[styles.segment, active && { backgroundColor: colors.primary }]}
           >
             <Text
               style={[
@@ -72,6 +71,8 @@ export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { settings, updateSettings, resetStats, stats } = useApp();
+  const { user, logout } = useAuth();
+  const router = useRouter();
   const [confirmReset, setConfirmReset] = useState(false);
   const topInset = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
@@ -99,7 +100,8 @@ export default function SettingsScreen() {
           text: "Reset",
           style: "destructive",
           onPress: async () => {
-            if (settings.hapticsEnabled) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            if (settings.hapticsEnabled)
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
             await resetStats();
           },
         },
@@ -107,21 +109,48 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleLogout = async () => {
+    await logout();
+    router.replace("/login");
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          {
-            paddingTop: topInset + 16,
-            paddingBottom: Platform.OS === "web" ? 100 : 100,
-          },
+          { paddingTop: topInset + 16, paddingBottom: 100 },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <Text style={[styles.title, { color: colors.foreground }]}>Settings</Text>
 
-        {/* Quiz Settings */}
+        {user && (
+          <>
+            <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>ACCOUNT</Text>
+            <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={[styles.profileAvatar, { backgroundColor: colors.primary }]}>
+                <Text style={styles.profileAvatarText}>
+                  {user.displayName
+                    .split(" ")
+                    .map((w) => w[0] ?? "")
+                    .join("")
+                    .toUpperCase()
+                    .slice(0, 2)}
+                </Text>
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={[styles.profileName, { color: colors.foreground }]}>
+                  {user.displayName}
+                </Text>
+                <Text style={[styles.profileUsername, { color: colors.mutedForeground }]}>
+                  @{user.username}
+                </Text>
+              </View>
+            </View>
+          </>
+        )}
+
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>QUIZ</Text>
 
         <SettingRow>
@@ -148,7 +177,7 @@ export default function SettingsScreen() {
               value={settings.timerEnabled}
               onValueChange={handleToggleTimer}
               trackColor={{ false: colors.secondary, true: colors.primary }}
-              thumbColor={"#FFFFFF"}
+              thumbColor="#FFFFFF"
             />
           </View>
         </SettingRow>
@@ -170,7 +199,6 @@ export default function SettingsScreen() {
           </SettingRow>
         )}
 
-        {/* Accessibility */}
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>FEEDBACK</Text>
 
         <SettingRow>
@@ -183,12 +211,11 @@ export default function SettingsScreen() {
               value={settings.hapticsEnabled}
               onValueChange={handleToggleHaptics}
               trackColor={{ false: colors.secondary, true: colors.primary }}
-              thumbColor={"#FFFFFF"}
+              thumbColor="#FFFFFF"
             />
           </View>
         </SettingRow>
 
-        {/* Data */}
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>DATA</Text>
 
         <View style={[styles.statsInfo, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -241,17 +268,27 @@ export default function SettingsScreen() {
           </Pressable>
         )}
 
-        {/* About */}
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>ABOUT</Text>
         <View style={[styles.aboutCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.aboutTitle, { color: colors.foreground }]}>
-            Histo<Text style={{ color: colors.primary }}>Spotter</Text>
+            Med<Text style={{ color: colors.primary }}>Spotter</Text>
           </Text>
           <Text style={[styles.aboutText, { color: colors.mutedForeground }]}>
-            A histology quiz app with {20} questions across 4 categories. Practice identifying tissue types and structures from microscopy slides.
+            A histology quiz app with questions across multiple categories. Practice identifying tissue types and structures from microscopy slides.
           </Text>
           <Text style={[styles.version, { color: colors.mutedForeground }]}>Version 1.0.0</Text>
         </View>
+
+        <Pressable
+          onPress={handleLogout}
+          style={({ pressed }) => [
+            styles.logoutBtn,
+            { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.7 : 1 },
+          ]}
+        >
+          <Feather name="log-out" size={18} color={colors.mutedForeground} />
+          <Text style={[styles.logoutText, { color: colors.mutedForeground }]}>Sign Out</Text>
+        </Pressable>
       </ScrollView>
     </View>
   );
@@ -260,11 +297,8 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: 20 },
-  title: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 28,
-    marginBottom: 20,
-  },
+  title: { fontFamily: "Inter_700Bold", fontSize: 28, marginBottom: 20 },
+
   sectionLabel: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 11,
@@ -272,6 +306,32 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 16,
   },
+
+  profileCard: {
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  profileAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  profileAvatarText: {
+    color: "#FFFFFF",
+    fontFamily: "Inter_700Bold",
+    fontSize: 16,
+  },
+  profileInfo: { flex: 1 },
+  profileName: { fontFamily: "Inter_600SemiBold", fontSize: 16 },
+  profileUsername: { fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 },
+
   settingRow: {
     borderRadius: 14,
     padding: 16,
@@ -279,15 +339,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 12,
   },
-  settingHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  settingTitle: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 15,
-  },
+  settingHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+  settingTitle: { fontFamily: "Inter_500Medium", fontSize: 15 },
   settingToggleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -299,16 +352,9 @@ const styles = StyleSheet.create({
     padding: 3,
     borderWidth: 1,
   },
-  segment: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  segmentText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-  },
+  segment: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: "center" },
+  segmentText: { fontFamily: "Inter_600SemiBold", fontSize: 13 },
+
   statsInfo: {
     borderRadius: 14,
     padding: 16,
@@ -321,15 +367,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 4,
   },
-  statsInfoLabel: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-  },
-  statsInfoValue: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-  },
+  statsInfoLabel: { fontFamily: "Inter_400Regular", fontSize: 14 },
+  statsInfoValue: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
   divider: { height: 1, marginVertical: 8 },
+
   resetBtn: {
     borderRadius: 14,
     padding: 16,
@@ -340,10 +381,8 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 10,
   },
-  resetBtnText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-  },
+  resetBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
+
   confirmBox: {
     borderRadius: 14,
     padding: 16,
@@ -356,38 +395,39 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: "center",
   },
-  confirmButtons: {
-    flexDirection: "row",
-    gap: 10,
-  },
+  confirmButtons: { flexDirection: "row", gap: 10 },
   confirmBtn: {
     flex: 1,
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: "center",
   },
-  confirmBtnText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-  },
+  confirmBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
+
   aboutCard: {
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
     gap: 8,
   },
-  aboutTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 18,
-  },
+  aboutTitle: { fontFamily: "Inter_700Bold", fontSize: 18 },
   aboutText: {
     fontFamily: "Inter_400Regular",
     fontSize: 13,
     lineHeight: 19,
   },
-  version: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    marginTop: 4,
+  version: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 4 },
+
+  logoutBtn: {
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    marginTop: 8,
+    marginBottom: 10,
   },
+  logoutText: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
 });

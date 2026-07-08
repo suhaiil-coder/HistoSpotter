@@ -49,8 +49,6 @@ interface AppContextValue {
   saveQuizResult: (result: QuizResult) => void;
   updateSettings: (patch: Partial<AppSettings>) => void;
   resetStats: () => void;
-  unreadChatCount: number;
-  setUnreadChatCount: React.Dispatch<React.SetStateAction<number>>;
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -71,10 +69,10 @@ const DEFAULT_STATS: AppStats = {
 const AppContext = createContext<AppContextValue | null>(null);
 
 const KEYS = {
-  bookmarks: "@histospotter/bookmarks",
-  stats: "@histospotter/stats",
-  settings: "@histospotter/settings",
-  history: "@histospotter/history",
+  bookmarks: "@medspotter/bookmarks",
+  stats: "@medspotter/stats",
+  settings: "@medspotter/settings",
+  history: "@medspotter/history",
 };
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -82,7 +80,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [stats, setStats] = useState<AppStats>(DEFAULT_STATS);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [quizHistory, setQuizHistory] = useState<QuizResult[]>([]);
-  const [unreadChatCount, setUnreadChatCount] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -172,8 +169,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         saveQuizResult,
         updateSettings,
         resetStats,
-        unreadChatCount,
-        setUnreadChatCount,
       }}
     >
       {children}
