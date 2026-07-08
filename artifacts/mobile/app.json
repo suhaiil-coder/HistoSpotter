@@ -11,13 +11,20 @@
     "splash": {
       "image": "./assets/images/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0D0D1A"
+      "backgroundColor": "#0A0A12"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.medspotter.app"
     },
     "android": {
-      "backgroundColor": "#0D0D1A"
+      "backgroundColor": "#0A0A12",
+      "package": "com.medspotter.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#0A0A12"
+      },
+      "permissions": []
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
