@@ -60,10 +60,10 @@ export default function HomeScreen() {
 
           <View style={{ flex: 1 }}>
             <Text style={[styles.appTitle, { color: colors.foreground }]}>
-              Histo<Text style={{ color: colors.primary }}>Spotter</Text>
+              Med<Text style={{ color: colors.primary }}>Spotter</Text>
             </Text>
             <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-              Histology Quiz App
+              Histology Quiz
             </Text>
           </View>
         </View>

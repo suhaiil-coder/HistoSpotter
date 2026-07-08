@@ -14,6 +14,7 @@ function ClassicTabLayout() {
 
   return (
     <Tabs
+      initialRouteName="spotter"
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
@@ -44,18 +45,6 @@ function ClassicTabLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
-        options={{
-          title: "Quiz",
-          tabBarIcon: ({ color, size }) =>
-            isIOS ? (
-              <SymbolView name="brain.head.profile" tintColor={color} size={size} />
-            ) : (
-              <Feather name="zap" size={size} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
         name="spotter"
         options={{
           title: "Spotter",
@@ -64,6 +53,18 @@ function ClassicTabLayout() {
               <SymbolView name="eye" tintColor={color} size={size} />
             ) : (
               <Feather name="eye" size={size} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Quiz",
+          tabBarIcon: ({ color, size }) =>
+            isIOS ? (
+              <SymbolView name="brain.head.profile" tintColor={color} size={size} />
+            ) : (
+              <Feather name="zap" size={size} color={color} />
             ),
         }}
       />

@@ -1,13 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback } from "react";
-import {
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
@@ -31,8 +25,8 @@ function getInitials(name: string): string {
 }
 
 const AVATAR_COLORS = [
-  "#7C3AED", "#2563EB", "#059669", "#D97706",
-  "#DC2626", "#7C3AED", "#0891B2", "#9333EA",
+  "#06B6D4", "#2563EB", "#059669", "#D97706",
+  "#DC2626", "#0891B2", "#9333EA", "#0284C7",
 ];
 
 function avatarColor(username: string): string {
@@ -71,10 +65,7 @@ export default function LeaderboardScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingTop: topInset + 16, paddingBottom: 100 },
-        ]}
+        contentContainerStyle={[styles.scroll, { paddingTop: topInset + 16, paddingBottom: 100 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerRow}>
@@ -110,7 +101,7 @@ export default function LeaderboardScreen() {
               style={[
                 styles.row,
                 {
-                  backgroundColor: isMe ? "#1E1040" : colors.card,
+                  backgroundColor: isMe ? "#071E2A" : colors.card,
                   borderColor: isMe ? colors.primary : colors.border,
                   borderWidth: isMe ? 1.5 : 1,
                 },
@@ -141,7 +132,7 @@ export default function LeaderboardScreen() {
               </View>
 
               <View style={styles.timeCol}>
-                <Text style={[styles.timeValue, { color: isMe ? "#A855F7" : colors.foreground }]}>
+                <Text style={[styles.timeValue, { color: isMe ? colors.accent : colors.foreground }]}>
                   {formatTime(u.totalMinutes)}
                 </Text>
                 <Text style={[styles.timeLabel, { color: colors.mutedForeground }]}>
@@ -175,15 +166,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 24,
   },
-  title: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 28,
-  },
-  subtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    marginTop: 2,
-  },
+  title: { fontFamily: "Inter_700Bold", fontSize: 28 },
+  subtitle: { fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 },
   trophyCircle: {
     width: 48,
     height: 48,
@@ -202,15 +186,8 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 16,
   },
-  emptyTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 16,
-  },
-  emptyText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    textAlign: "center",
-  },
+  emptyTitle: { fontFamily: "Inter_600SemiBold", fontSize: 16 },
+  emptyText: { fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center" },
 
   row: {
     flexDirection: "row",
@@ -226,15 +203,11 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: "#252540",
+    backgroundColor: "#112040",
     alignItems: "center",
     justifyContent: "center",
   },
-  rankText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 13,
-    color: "#9090B0",
-  },
+  rankText: { fontFamily: "Inter_700Bold", fontSize: 13, color: "#5F899F" },
 
   avatar: {
     width: 44,
@@ -243,42 +216,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: {
-    color: "#FFFFFF",
-    fontFamily: "Inter_700Bold",
-    fontSize: 14,
-  },
+  avatarText: { color: "#FFFFFF", fontFamily: "Inter_700Bold", fontSize: 14 },
 
   nameCol: { flex: 1, gap: 2 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  displayName: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-  },
-  youBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  youText: {
-    color: "#FFFFFF",
-    fontFamily: "Inter_700Bold",
-    fontSize: 10,
-  },
-  username: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-  },
+  displayName: { fontFamily: "Inter_600SemiBold", fontSize: 15 },
+  youBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 },
+  youText: { color: "#FFFFFF", fontFamily: "Inter_700Bold", fontSize: 10 },
+  username: { fontFamily: "Inter_400Regular", fontSize: 12 },
 
   timeCol: { alignItems: "flex-end", gap: 2 },
-  timeValue: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 15,
-  },
-  timeLabel: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
-  },
+  timeValue: { fontFamily: "Inter_700Bold", fontSize: 15 },
+  timeLabel: { fontFamily: "Inter_400Regular", fontSize: 11 },
 
   infoCard: {
     flexDirection: "row",
@@ -289,9 +238,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginTop: 4,
   },
-  infoText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    flex: 1,
-  },
+  infoText: { fontFamily: "Inter_400Regular", fontSize: 12, flex: 1 },
 });
