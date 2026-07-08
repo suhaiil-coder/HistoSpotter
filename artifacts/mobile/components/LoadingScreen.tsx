@@ -1,7 +1,10 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
 
+import { useColors } from "@/hooks/useColors";
+
 export function LoadingScreen() {
+  const colors = useColors();
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.85)).current;
   const dot1 = useRef(new Animated.Value(0)).current;
@@ -10,17 +13,8 @@ export function LoadingScreen() {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(logoOpacity, {
-        toValue: 1,
-        duration: 700,
-        useNativeDriver: true,
-      }),
-      Animated.spring(logoScale, {
-        toValue: 1,
-        tension: 60,
-        friction: 8,
-        useNativeDriver: true,
-      }),
+      Animated.timing(logoOpacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.spring(logoScale, { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }),
     ]).start();
 
     const bounce = (dot: Animated.Value, delay: number) =>
@@ -41,46 +35,41 @@ export function LoadingScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.glow} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.glow, { backgroundColor: colors.primary }]} />
 
       <Animated.View
         style={[styles.logoWrap, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}
       >
-        <View style={styles.badge}>
+        <View style={[styles.badge, { backgroundColor: colors.primary, shadowColor: colors.primary }]}>
           <Text style={styles.badgeText}>M</Text>
         </View>
         <Text style={styles.wordmark}>
-          <Text style={styles.wordmarkLight}>Med</Text>
-          <Text style={styles.wordmarkCyan}>Spotter</Text>
+          <Text style={[styles.wordmarkLight, { color: colors.foreground }]}>Med</Text>
+          <Text style={{ color: colors.primary, fontFamily: "Inter_700Bold", fontSize: 36 }}>Spotter</Text>
         </Text>
-        <Text style={styles.tagline}>Master Histology</Text>
+        <Text style={[styles.tagline, { color: colors.mutedForeground }]}>Master Histology</Text>
       </Animated.View>
 
       <View style={styles.dotsRow}>
         {[dot1, dot2, dot3].map((dot, i) => (
-          <Animated.View key={i} style={[styles.dot, { transform: [{ translateY: dot }] }]} />
+          <Animated.View
+            key={i}
+            style={[styles.dot, { backgroundColor: colors.primary, transform: [{ translateY: dot }] }]}
+          />
         ))}
       </View>
     </View>
   );
 }
 
-const CYAN = "#06B6D4";
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#060C18",
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  container: { flex: 1, alignItems: "center", justifyContent: "center" },
   glow: {
     position: "absolute",
     width: 320,
     height: 320,
     borderRadius: 160,
-    backgroundColor: CYAN,
     opacity: 0.07,
     top: "30%",
     alignSelf: "center",
@@ -90,42 +79,23 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 20,
-    backgroundColor: CYAN,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
-    shadowColor: CYAN,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.5,
     shadowRadius: 16,
     elevation: 12,
   },
-  badgeText: {
-    color: "#FFFFFF",
-    fontSize: 36,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: -1,
-  },
+  badgeText: { color: "#FFFFFF", fontSize: 36, fontFamily: "Inter_700Bold", letterSpacing: -1 },
   wordmark: { fontSize: 36, letterSpacing: -0.5 },
-  wordmarkLight: { color: "#E8F4FF", fontFamily: "Inter_700Bold" },
-  wordmarkCyan: { color: CYAN, fontFamily: "Inter_700Bold" },
+  wordmarkLight: { fontFamily: "Inter_700Bold" },
   tagline: {
-    color: "#5F899F",
     fontFamily: "Inter_400Regular",
     fontSize: 14,
     letterSpacing: 2,
     textTransform: "uppercase",
   },
-  dotsRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 60,
-    alignItems: "flex-end",
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: CYAN,
-  },
+  dotsRow: { flexDirection: "row", gap: 8, marginTop: 60, alignItems: "flex-end" },
+  dot: { width: 8, height: 8, borderRadius: 4 },
 });

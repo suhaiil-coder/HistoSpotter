@@ -16,7 +16,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme } from "@/context/ThemeContext";
 import { useColors } from "@/hooks/useColors";
+import { THEMES, ThemeKey } from "@/constants/themes";
 
 const TIME_OPTIONS = [15, 30, 60] as const;
 const QUESTION_OPTIONS = [5, 10, 15, 20] as const;
@@ -63,6 +65,59 @@ function SettingRow({ children }: { children: React.ReactNode }) {
   return (
     <View style={[styles.settingRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
       {children}
+    </View>
+  );
+}
+
+const THEME_ORDER: ThemeKey[] = ["midnight", "gold", "cobalt", "forest", "rose", "ocean"];
+
+function ThemePicker() {
+  const colors = useColors();
+  const { themeKey, setTheme } = useTheme();
+
+  return (
+    <View style={[styles.themeGrid]}>
+      {THEME_ORDER.map((key) => {
+        const theme = THEMES[key];
+        const active = themeKey === key;
+        return (
+          <Pressable
+            key={key}
+            onPress={() => {
+              setTheme(key);
+              Haptics.selectionAsync();
+            }}
+            style={[
+              styles.themeCard,
+              {
+                backgroundColor: colors.card,
+                borderColor: active ? theme.preview : colors.border,
+                borderWidth: active ? 2 : 1,
+              },
+            ]}
+          >
+            <View style={[styles.themeSwatchRow]}>
+              <View style={[styles.themeSwatch, { backgroundColor: theme.colors.background, borderColor: colors.border }]}>
+                <View style={[styles.themeSwatchAccent, { backgroundColor: theme.preview }]} />
+              </View>
+              {active && (
+                <View style={[styles.themeCheck, { backgroundColor: theme.preview }]}>
+                  <Feather name="check" size={10} color="#FFFFFF" />
+                </View>
+              )}
+            </View>
+            <Text
+              style={[
+                styles.themeCardName,
+                { color: active ? theme.preview : colors.foreground },
+              ]}
+              numberOfLines={1}
+            >
+              {theme.name}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -150,6 +205,9 @@ export default function SettingsScreen() {
             </View>
           </>
         )}
+
+        <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>APPEARANCE</Text>
+        <ThemePicker />
 
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>QUIZ</Text>
 
@@ -323,14 +381,54 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  profileAvatarText: {
-    color: "#FFFFFF",
-    fontFamily: "Inter_700Bold",
-    fontSize: 16,
-  },
+  profileAvatarText: { color: "#FFFFFF", fontFamily: "Inter_700Bold", fontSize: 16 },
   profileInfo: { flex: 1 },
   profileName: { fontFamily: "Inter_600SemiBold", fontSize: 16 },
   profileUsername: { fontFamily: "Inter_400Regular", fontSize: 13, marginTop: 2 },
+
+  themeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 4,
+  },
+  themeCard: {
+    width: "30%",
+    borderRadius: 14,
+    padding: 12,
+    gap: 8,
+    alignItems: "center",
+  },
+  themeSwatchRow: { position: "relative", alignSelf: "stretch", alignItems: "center" },
+  themeSwatch: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  themeSwatchAccent: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  themeCheck: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  themeCardName: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    textAlign: "center",
+  },
 
   settingRow: {
     borderRadius: 14,
@@ -390,11 +488,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     gap: 12,
   },
-  confirmText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 15,
-    textAlign: "center",
-  },
+  confirmText: { fontFamily: "Inter_500Medium", fontSize: 15, textAlign: "center" },
   confirmButtons: { flexDirection: "row", gap: 10 },
   confirmBtn: {
     flex: 1,
@@ -411,11 +505,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   aboutTitle: { fontFamily: "Inter_700Bold", fontSize: 18 },
-  aboutText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    lineHeight: 19,
-  },
+  aboutText: { fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 19 },
   version: { fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 4 },
 
   logoutBtn: {

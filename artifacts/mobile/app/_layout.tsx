@@ -6,7 +6,7 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Redirect, Stack, useRouter, useSegments } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -17,6 +17,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { AppProvider } from "@/context/AppContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -60,7 +61,7 @@ function RootLayoutNav() {
   );
 }
 
-export default function RootLayout() {
+function RootLayoutInner() {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -92,5 +93,13 @@ export default function RootLayout() {
         </QueryClientProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <RootLayoutInner />
+    </ThemeProvider>
   );
 }
