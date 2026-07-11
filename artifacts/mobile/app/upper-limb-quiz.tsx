@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
@@ -14,35 +15,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
 import { UPPER_LIMB_QUESTIONS } from "@/constants/upperLimbQuiz";
+import { UPPER_LIMB_IMAGES } from "@/constants/upperLimbImages";
 
 const TOTAL = UPPER_LIMB_QUESTIONS.length;
-
-const STRUCTURE_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
-  muscle: "activity",
-  artery: "heart",
-  nerve: "zap",
-  vein: "droplet",
-  space: "maximize",
-  retinaculum: "grid",
-};
-
-function getIcon(structureName: string): keyof typeof Feather.glyphMap {
-  const lower = structureName.toLowerCase();
-  if (lower.includes("artery") || lower.includes("arch") || lower.includes("vascular")) return "heart";
-  if (lower.includes("nerve")) return "zap";
-  if (lower.includes("space")) return "maximize";
-  if (lower.includes("retinaculum")) return "grid";
-  return "activity";
-}
-
-const ACCENT_COLORS = [
-  "#7C65FA", "#EF4444", "#F59E0B", "#06B6D4",
-  "#10B981", "#F97316", "#E879F9", "#3B82F6",
-];
-
-function getAccent(id: number) {
-  return ACCENT_COLORS[id % ACCENT_COLORS.length];
-}
 
 function AnswerSection({
   label,
@@ -92,8 +67,6 @@ export default function UpperLimbQuizScreen() {
   const slideAnim = useRef(new Animated.Value(12)).current;
 
   const question = UPPER_LIMB_QUESTIONS[index];
-  const accent = getAccent(question.id);
-  const icon = getIcon(question.structureName);
 
   const revealAnswer = () => {
     setRevealed(true);
@@ -179,52 +152,33 @@ export default function UpperLimbQuizScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Specimen placeholder card */}
+        {/* Specimen image */}
         <View
           style={[
-            styles.specimenCard,
+            styles.imageWrap,
             { backgroundColor: colors.card, borderColor: colors.border },
           ]}
         >
-          {/* Top accent line */}
-          <View style={[styles.specimenAccentLine, { backgroundColor: accent }]} />
+          <Image
+            source={UPPER_LIMB_IMAGES[question.id]}
+            style={styles.specimenImage}
+            contentFit="cover"
+            transition={200}
+          />
 
-          <View style={styles.specimenBody}>
-            {/* Icon circle */}
-            <View style={[styles.specimenIconCircle, { backgroundColor: accent + "20" }]}>
-              <Feather name={icon} size={40} color={accent} />
-            </View>
-
-            {/* Spotter badge + name */}
-            <View style={styles.specimenInfo}>
-              <View style={[styles.spotterBadge, { backgroundColor: accent + "20" }]}>
-                <Text style={[styles.spotterBadgeTxt, { color: accent }]}>
-                  SPOTTER {question.spotter}
-                </Text>
-              </View>
-              {revealed && (
-                <View style={[styles.structureRevealRow]}>
-                  <Feather name="check-circle" size={14} color={accent} />
-                  <Text style={[styles.structureRevealTxt, { color: accent }]}>
-                    {question.structureName}
-                  </Text>
-                </View>
-              )}
-              <Text style={[styles.specimenHint, { color: colors.mutedForeground }]}>
-                {revealed ? "Structure identified" : "Gross anatomy specimen"}
-              </Text>
-            </View>
+          {/* Spotter badge — top-left */}
+          <View style={[styles.specimenBadge, { backgroundColor: "rgba(0,0,0,0.55)" }]}>
+            <Text style={styles.specimenLabel}>SPOTTER</Text>
+            <Text style={styles.specimenNum}>{question.spotter}</Text>
           </View>
 
-          {/* Grid decoration */}
-          <View style={styles.gridDeco} pointerEvents="none">
-            {Array.from({ length: 24 }).map((_, i) => (
-              <View
-                key={i}
-                style={[styles.gridDot, { backgroundColor: accent + "18" }]}
-              />
-            ))}
-          </View>
+          {/* Structure name tag — bottom centre, revealed after answer */}
+          {revealed && (
+            <View style={[styles.structureTag, { backgroundColor: colors.primary }]}>
+              <Feather name="check-circle" size={13} color="#fff" />
+              <Text style={styles.structureTagTxt}>{question.structureName}</Text>
+            </View>
+          )}
         </View>
 
         {/* Question card */}
@@ -397,77 +351,43 @@ const styles = StyleSheet.create({
 
   scroll: { paddingHorizontal: 16, paddingTop: 16, gap: 14 },
 
-  // Specimen card
-  specimenCard: {
+  imageWrap: {
     borderRadius: 20,
     borderWidth: 1,
-    height: 200,
+    height: 260,
     overflow: "hidden",
     position: "relative",
   },
-  specimenAccentLine: {
+  specimenImage: {
+    width: "100%",
+    height: "100%",
+  },
+  specimenBadge: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 4,
-  },
-  specimenBody: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    gap: 20,
-    paddingTop: 4,
-  },
-  specimenIconCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  specimenInfo: { flex: 1, gap: 8 },
-  spotterBadge: {
-    alignSelf: "flex-start",
+    top: 12,
+    left: 12,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 8,
-  },
-  spotterBadgeTxt: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 11,
-    letterSpacing: 1.2,
-  },
-  structureRevealRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
   },
-  structureRevealTxt: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 15,
-  },
-  specimenHint: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-  },
-  gridDeco: {
+  specimenLabel: { fontSize: 9, fontFamily: "Inter_700Bold", letterSpacing: 1.2, color: "#fff" },
+  specimenNum: { fontSize: 13, fontFamily: "Inter_700Bold", color: "#fff" },
+  structureTag: {
     position: "absolute",
     bottom: 12,
-    right: 12,
+    alignSelf: "center",
     flexDirection: "row",
-    flexWrap: "wrap",
-    width: 72,
-    gap: 4,
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
   },
-  gridDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-  },
+  structureTagTxt: { fontSize: 13, fontFamily: "Inter_700Bold", color: "#fff" },
 
-  // Cards
   card: {
     borderRadius: 16,
     padding: 16,
