@@ -346,6 +346,89 @@ function LargeCard({ subject, onPress }: { subject: Subject; onPress: () => void
   );
 }
 
+// ─── Histology Spotter Banner ─────────────────────────────────────────────────
+
+function SpotterBanner({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.spotterBanner, { opacity: pressed ? 0.88 : 1 }]}
+    >
+      {/* Background: histology slide thumbnail */}
+      <Image
+        source={THUMBNAILS["histology"]}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        transition={300}
+      />
+
+      {/* Deep purple-to-black gradient overlay */}
+      <LinearGradient
+        colors={["rgba(124,58,237,0.55)", "rgba(10,4,26,0.92)"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {/* Glowing top-left accent orb */}
+      <View style={styles.spotterOrb} />
+
+      <View style={styles.spotterContent}>
+        {/* Left column: copy */}
+        <View style={styles.spotterLeft}>
+          <View style={styles.spotterBadgeRow}>
+            <View style={styles.spotterLiveDot} />
+            <Text style={styles.spotterLiveTxt}>FEATURED</Text>
+          </View>
+
+          <Text style={styles.spotterTitle}>Histology{"\n"}Spotter</Text>
+          <Text style={styles.spotterSub}>
+            Identify H&amp;E slides under the clock
+          </Text>
+
+          {/* Feature pills */}
+          <View style={styles.spotterPills}>
+            {["60+ Slides", "Timed Mode", "Categories"].map((tag) => (
+              <View key={tag} style={styles.spotterPill}>
+                <Text style={styles.spotterPillTxt}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* CTA */}
+          <Pressable onPress={onPress} style={styles.spotterBtn}>
+            <MaterialCommunityIcons name="microscope" size={16} color="#1a0a2e" />
+            <Text style={styles.spotterBtnTxt}>Start Spotting</Text>
+            <Feather name="arrow-right" size={14} color="#1a0a2e" />
+          </Pressable>
+        </View>
+
+        {/* Right column: stacked slide peek */}
+        <View style={styles.spotterRight}>
+          <View style={styles.spotterSlideBack} />
+          <View style={styles.spotterSlideMid} />
+          <View style={styles.spotterSlideFront}>
+            <Image
+              source={THUMBNAILS["histology"]}
+              style={{ width: "100%", height: "100%", borderRadius: 12 }}
+              contentFit="cover"
+            />
+            <LinearGradient
+              colors={["transparent", "rgba(124,58,237,0.6)"]}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 0, y: 1 }}
+              style={[StyleSheet.absoluteFill, { borderRadius: 12 }]}
+            />
+            <View style={styles.spotterSlideLabel}>
+              <Text style={styles.spotterSlideLabelTxt}>H&amp;E ×40</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
 // ─── Row header ───────────────────────────────────────────────────────────────
 
 function RowHeader({ title, accent }: { title: string; accent?: boolean }) {
@@ -461,6 +544,9 @@ export default function HomeScreen() {
             </View>
           </View>
         )}
+
+        {/* ── Histology Spotter Banner ── */}
+        <SpotterBanner onPress={() => router.push("/(tabs)/spotter")} />
 
         {/* ── Continue Learning ── */}
         <View style={styles.section}>
@@ -731,6 +817,145 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   largeCardCountTxt: { fontSize: 10, fontFamily: "Inter_700Bold" },
+
+  // Spotter Banner
+  spotterBanner: {
+    marginHorizontal: 16,
+    marginTop: 20,
+    borderRadius: 20,
+    overflow: "hidden",
+    height: 200,
+  },
+  spotterOrb: {
+    position: "absolute",
+    top: -40,
+    left: -40,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: "rgba(167,139,250,0.25)",
+  },
+  spotterContent: {
+    flex: 1,
+    flexDirection: "row",
+    padding: 20,
+    gap: 12,
+  },
+  spotterLeft: {
+    flex: 1,
+    justifyContent: "space-between",
+  },
+  spotterBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  spotterLiveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#A78BFA",
+  },
+  spotterLiveTxt: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    color: "#A78BFA",
+    letterSpacing: 1.2,
+  },
+  spotterTitle: {
+    fontSize: 22,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+    lineHeight: 26,
+    marginTop: 4,
+  },
+  spotterSub: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.65)",
+    marginTop: 2,
+  },
+  spotterPills: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 5,
+    marginTop: 8,
+  },
+  spotterPill: {
+    backgroundColor: "rgba(167,139,250,0.2)",
+    borderWidth: 1,
+    borderColor: "rgba(167,139,250,0.4)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
+  },
+  spotterPillTxt: {
+    fontSize: 9,
+    fontFamily: "Inter_600SemiBold",
+    color: "#C4B5FD",
+  },
+  spotterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    backgroundColor: "#A78BFA",
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 22,
+    marginTop: 10,
+  },
+  spotterBtnTxt: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    color: "#1a0a2e",
+  },
+  spotterRight: {
+    width: 110,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  spotterSlideBack: {
+    position: "absolute",
+    width: 88,
+    height: 108,
+    borderRadius: 12,
+    backgroundColor: "rgba(167,139,250,0.15)",
+    top: 14,
+    right: -6,
+    transform: [{ rotate: "8deg" }],
+  },
+  spotterSlideMid: {
+    position: "absolute",
+    width: 90,
+    height: 110,
+    borderRadius: 12,
+    backgroundColor: "rgba(167,139,250,0.22)",
+    top: 8,
+    right: -1,
+    transform: [{ rotate: "4deg" }],
+  },
+  spotterSlideFront: {
+    width: 92,
+    height: 112,
+    borderRadius: 12,
+    overflow: "hidden",
+    position: "relative",
+  },
+  spotterSlideLabel: {
+    position: "absolute",
+    bottom: 8,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  spotterSlideLabelTxt: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    color: "#E9D5FF",
+    letterSpacing: 0.5,
+  },
 
   // Last quiz recap
   recapCard: {
