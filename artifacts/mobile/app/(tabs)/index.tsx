@@ -2,6 +2,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
+  Dimensions,
   Platform,
   Pressable,
   ScrollView,
@@ -14,183 +15,397 @@ import { Feather } from "@expo/vector-icons";
 
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
-import { CATEGORIES } from "@/constants/questions";
 import DrawerMenu from "@/components/DrawerMenu";
+
+const { width: SCREEN_W } = Dimensions.get("window");
+
+// ─── Subject catalogue ────────────────────────────────────────────────────────
+
+type IconName = React.ComponentProps<typeof Feather>["name"];
+
+interface Subject {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: IconName;
+  color: string;
+  accent: string;
+  questionCount: number;
+  route?: string;
+  isNew?: boolean;
+  badge?: string;
+}
+
+const SUBJECTS: Subject[] = [
+  {
+    id: "histology",
+    title: "Histology",
+    subtitle: "Spot-diagnosis quiz",
+    icon: "aperture",
+    color: "#7C3AED",
+    accent: "#A855F7",
+    questionCount: 60,
+    route: "/quiz",
+    badge: "Popular",
+  },
+  {
+    id: "head-neck",
+    title: "Head & Neck",
+    subtitle: "Gross anatomy · Spotters",
+    icon: "user",
+    color: "#0EA5E9",
+    accent: "#38BDF8",
+    questionCount: 30,
+    route: "/head-neck-quiz",
+  },
+  {
+    id: "upper-limb",
+    title: "Upper Limb",
+    subtitle: "Gross anatomy · Spotters",
+    icon: "arrow-up-right",
+    color: "#10B981",
+    accent: "#34D399",
+    questionCount: 31,
+    route: "/upper-limb-quiz",
+  },
+  {
+    id: "thorax",
+    title: "Thorax",
+    subtitle: "Gross anatomy · Spotters",
+    icon: "activity",
+    color: "#F59E0B",
+    accent: "#FCD34D",
+    questionCount: 29,
+    route: "/thorax-quiz",
+  },
+  {
+    id: "abdomen",
+    title: "Abdomen & Pelvis",
+    subtitle: "Gross anatomy · Spotters",
+    icon: "circle",
+    color: "#EF4444",
+    accent: "#F87171",
+    questionCount: 60,
+    route: "/abdomen-quiz",
+    isNew: true,
+  },
+  {
+    id: "neuroanatomy",
+    title: "Neuroanatomy",
+    subtitle: "Coming soon",
+    icon: "cpu",
+    color: "#8B5CF6",
+    accent: "#A78BFA",
+    questionCount: 0,
+  },
+  {
+    id: "embryology",
+    title: "Embryology",
+    subtitle: "Coming soon",
+    icon: "git-branch",
+    color: "#EC4899",
+    accent: "#F472B6",
+    questionCount: 0,
+  },
+  {
+    id: "osteology",
+    title: "Osteology",
+    subtitle: "Coming soon",
+    icon: "box",
+    color: "#6366F1",
+    accent: "#818CF8",
+    questionCount: 0,
+  },
+];
+
+const FEATURED = SUBJECTS[4]; // Abdomen — newest
+
+const RECENTLY_ADDED = SUBJECTS.filter((s) => s.isNew || s.id === "thorax" || s.id === "upper-limb");
+
+// ─── Hero Card ────────────────────────────────────────────────────────────────
+
+function HeroCard({ subject, onPress }: { subject: Subject; onPress: () => void }) {
+  const colors = useColors();
+  return (
+    <Pressable onPress={onPress} style={styles.hero}>
+      <LinearGradient
+        colors={[subject.color + "CC", subject.accent + "88", "#0D0D14"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.heroGradient}
+      >
+        {/* Big icon */}
+        <View style={[styles.heroIconWrap, { backgroundColor: "rgba(255,255,255,0.12)" }]}>
+          <Feather name={subject.icon} size={52} color="#fff" />
+        </View>
+
+        {/* Meta */}
+        <View style={styles.heroMeta}>
+          {subject.isNew && (
+            <View style={[styles.heroBadge, { backgroundColor: subject.accent }]}>
+              <Text style={styles.heroBadgeTxt}>NEW</Text>
+            </View>
+          )}
+          <Text style={styles.heroTitle}>{subject.title}</Text>
+          <Text style={styles.heroSub}>{subject.subtitle}</Text>
+          <Text style={styles.heroCount}>{subject.questionCount} spotters</Text>
+
+          <Pressable
+            onPress={onPress}
+            style={[styles.heroBtn, { backgroundColor: "#fff" }]}
+          >
+            <Feather name="play" size={14} color={subject.color} />
+            <Text style={[styles.heroBtnTxt, { color: subject.color }]}>Start Now</Text>
+          </Pressable>
+        </View>
+      </LinearGradient>
+    </Pressable>
+  );
+}
+
+// ─── Horizontal subject card ──────────────────────────────────────────────────
+
+function SubjectCard({ subject, onPress, size = "md" }: { subject: Subject; onPress: () => void; size?: "sm" | "md" }) {
+  const w = size === "sm" ? 130 : 160;
+  const h = size === "sm" ? 90 : 110;
+  const disabled = !subject.route;
+
+  return (
+    <Pressable
+      onPress={disabled ? undefined : onPress}
+      style={({ pressed }) => [
+        styles.subjectCard,
+        { width: w, opacity: disabled ? 0.45 : pressed ? 0.75 : 1 },
+      ]}
+    >
+      {/* Image area */}
+      <LinearGradient
+        colors={[subject.color, subject.accent]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.subjectCardImg, { height: h }]}
+      >
+        <Feather name={subject.icon} size={size === "sm" ? 28 : 34} color="rgba(255,255,255,0.9)" />
+        {subject.badge && (
+          <View style={styles.subjectBadge}>
+            <Text style={styles.subjectBadgeTxt}>{subject.badge}</Text>
+          </View>
+        )}
+        {subject.isNew && (
+          <View style={[styles.subjectBadge, { backgroundColor: "#EF4444" }]}>
+            <Text style={styles.subjectBadgeTxt}>NEW</Text>
+          </View>
+        )}
+      </LinearGradient>
+
+      {/* Text below */}
+      <Text style={styles.subjectCardTitle} numberOfLines={1}>{subject.title}</Text>
+      <Text style={styles.subjectCardSub} numberOfLines={1}>
+        {subject.questionCount > 0 ? `${subject.questionCount} spotters` : "Coming soon"}
+      </Text>
+    </Pressable>
+  );
+}
+
+// ─── Large grid card ──────────────────────────────────────────────────────────
+
+function LargeCard({ subject, onPress }: { subject: Subject; onPress: () => void }) {
+  const colors = useColors();
+  const disabled = !subject.route;
+  const cardW = (SCREEN_W - 48) / 2;
+
+  return (
+    <Pressable
+      onPress={disabled ? undefined : onPress}
+      style={({ pressed }) => [
+        styles.largeCard,
+        { width: cardW, opacity: disabled ? 0.4 : pressed ? 0.75 : 1, backgroundColor: colors.card, borderColor: colors.border },
+      ]}
+    >
+      {/* Top icon area */}
+      <LinearGradient
+        colors={[subject.color + "EE", subject.accent + "AA"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.largeCardTop}
+      >
+        <Feather name={subject.icon} size={40} color="rgba(255,255,255,0.95)" />
+        {(subject.isNew || subject.badge) && (
+          <View style={[styles.largeCardBadge, { backgroundColor: subject.isNew ? "#EF4444" : "#F59E0B" }]}>
+            <Text style={styles.largeCardBadgeTxt}>{subject.isNew ? "NEW" : subject.badge}</Text>
+          </View>
+        )}
+      </LinearGradient>
+
+      {/* Content below */}
+      <View style={styles.largeCardBody}>
+        <Text style={[styles.largeCardTitle, { color: colors.foreground }]} numberOfLines={2}>
+          {subject.title}
+        </Text>
+        <Text style={[styles.largeCardSub, { color: colors.mutedForeground }]} numberOfLines={1}>
+          {subject.subtitle}
+        </Text>
+        {subject.questionCount > 0 && (
+          <View style={[styles.largeCardCount, { backgroundColor: subject.color + "22" }]}>
+            <Text style={[styles.largeCardCountTxt, { color: subject.color }]}>
+              {subject.questionCount} Q
+            </Text>
+          </View>
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
+// ─── Row header ───────────────────────────────────────────────────────────────
+
+function RowHeader({ title, accent }: { title: string; accent?: boolean }) {
+  const colors = useColors();
+  return (
+    <View style={styles.rowHeader}>
+      {accent && <View style={[styles.rowAccentBar, { backgroundColor: colors.primary }]} />}
+      <Text style={[styles.rowTitle, { color: colors.foreground }]}>{title}</Text>
+    </View>
+  );
+}
+
+// ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { stats, settings, quizHistory } = useApp();
+  const { stats, quizHistory } = useApp();
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  const lastQuiz = quizHistory[0];
-  const accuracy =
-    stats.totalQuestions > 0
-      ? Math.round((stats.totalCorrect / stats.totalQuestions) * 100)
-      : 0;
 
   const topInset = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
+  const accuracy =
+    stats.totalQuestions > 0
+      ? Math.round((stats.totalCorrect / stats.totalQuestions) * 100)
+      : null;
+
+  const continueLearning = SUBJECTS.filter((s) => s.route && s.id !== "histology").slice(0, 5);
+
+  function navigate(subject: Subject) {
+    if (!subject.route) return;
+    router.push(subject.route as any);
+  }
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          {
-            paddingTop: topInset + 16,
-            paddingBottom: Platform.OS === "web" ? 100 : 100,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          {/* Hamburger */}
-          <Pressable
-            onPress={() => setDrawerOpen(true)}
-            style={({ pressed }) => [
-              styles.menuBtn,
-              { backgroundColor: colors.card, borderColor: colors.border },
-              pressed && { opacity: 0.7 },
-            ]}
-            hitSlop={8}
-          >
-            <Feather name="menu" size={20} color={colors.foreground} />
-          </Pressable>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
 
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.appTitle, { color: colors.foreground }]}>
-              Med<Text style={{ color: colors.primary }}>Spotter</Text>
-            </Text>
-            <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-              Histology Quiz
-            </Text>
-          </View>
-        </View>
+      {/* ── Floating header (sits above scroll) ── */}
+      <View style={[styles.floatingHeader, { paddingTop: topInset }]}>
+        <Pressable
+          onPress={() => setDrawerOpen(true)}
+          style={({ pressed }) => [styles.menuBtn, { backgroundColor: "rgba(0,0,0,0.45)", opacity: pressed ? 0.7 : 1 }]}
+          hitSlop={8}
+        >
+          <Feather name="menu" size={20} color="#fff" />
+        </Pressable>
 
-        {/* Last Quiz Card */}
-        {lastQuiz ? (
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.cardLabel, { color: colors.mutedForeground }]}>LAST QUIZ</Text>
-            <View style={styles.lastQuizRow}>
-              <View>
-                <Text style={[styles.scoreText, { color: colors.foreground }]}>
-                  {lastQuiz.score}/{lastQuiz.total}
-                </Text>
-                <Text style={[styles.scorePct, { color: colors.primary }]}>
-                  {Math.round((lastQuiz.score / lastQuiz.total) * 100)}% correct
-                </Text>
-              </View>
-              <Pressable
-                onPress={() =>
-                  router.push({
-                    pathname: "/review",
-                    params: { resultsJson: JSON.stringify(lastQuiz) },
-                  })
-                }
-                style={[styles.reviewBtn, { borderColor: colors.primary }]}
-              >
-                <Text style={[styles.reviewBtnText, { color: colors.primary }]}>Review</Text>
-              </Pressable>
+        <Text style={styles.floatingTitle}>
+          Med<Text style={{ color: colors.primary }}>Spotter</Text>
+        </Text>
+
+        <View style={styles.headerRight}>
+          {accuracy !== null && (
+            <View style={[styles.accuracyPill, { backgroundColor: colors.primary + "33" }]}>
+              <Text style={[styles.accuracyTxt, { color: colors.primary }]}>{accuracy}%</Text>
             </View>
-          </View>
-        ) : (
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.cardLabel, { color: colors.mutedForeground }]}>WELCOME</Text>
-            <Text style={[styles.welcomeText, { color: colors.foreground }]}>
-              Test your knowledge of histology slides. Start a quiz to begin!
-            </Text>
+          )}
+          <Pressable
+            onPress={() => router.push("/quiz")}
+            style={[styles.searchBtn, { backgroundColor: colors.primary }]}
+          >
+            <Feather name="play" size={16} color="#fff" />
+          </Pressable>
+        </View>
+      </View>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: Platform.OS === "web" ? 100 : insets.bottom + 100 }}
+      >
+        {/* ── Hero ── */}
+        <HeroCard subject={FEATURED} onPress={() => navigate(FEATURED)} />
+
+        {/* ── Stats strip ── */}
+        {stats.totalQuizzes > 0 && (
+          <View style={[styles.statsStrip, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.statItem}>
+              <Text style={[styles.statNum, { color: colors.primary }]}>{stats.totalQuizzes}</Text>
+              <Text style={[styles.statLbl, { color: colors.mutedForeground }]}>Quizzes</Text>
+            </View>
+            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statNum, { color: colors.primary }]}>{accuracy}%</Text>
+              <Text style={[styles.statLbl, { color: colors.mutedForeground }]}>Accuracy</Text>
+            </View>
+            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statNum, { color: colors.primary }]}>{stats.bestScore}%</Text>
+              <Text style={[styles.statLbl, { color: colors.mutedForeground }]}>Best</Text>
+            </View>
           </View>
         )}
 
-        {/* Overall Stats Row */}
-        <View style={styles.statsRow}>
-          <View style={[styles.statPill, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.statPillNum, { color: colors.primary }]}>
-              {stats.totalQuizzes}
-            </Text>
-            <Text style={[styles.statPillLabel, { color: colors.mutedForeground }]}>Quizzes</Text>
-          </View>
-          <View style={[styles.statPill, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.statPillNum, { color: colors.primary }]}>
-              {accuracy}%
-            </Text>
-            <Text style={[styles.statPillLabel, { color: colors.mutedForeground }]}>Accuracy</Text>
-          </View>
-          <View style={[styles.statPill, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.statPillNum, { color: colors.primary }]}>
-              {stats.bestScore}%
-            </Text>
-            <Text style={[styles.statPillLabel, { color: colors.mutedForeground }]}>Best</Text>
+        {/* ── Continue Learning ── */}
+        <View style={styles.section}>
+          <RowHeader title="Continue Learning" accent />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
+            {continueLearning.map((s) => (
+              <SubjectCard key={s.id} subject={s} onPress={() => navigate(s)} />
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* ── Recently Added ── */}
+        <View style={styles.section}>
+          <RowHeader title="Recently Added" />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
+            {RECENTLY_ADDED.map((s) => (
+              <SubjectCard key={s.id} subject={s} size="sm" onPress={() => navigate(s)} />
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* ── All Subjects Grid ── */}
+        <View style={styles.section}>
+          <RowHeader title="All Subjects" accent />
+          <View style={styles.largeGrid}>
+            {SUBJECTS.map((s) => (
+              <LargeCard key={s.id} subject={s} onPress={() => navigate(s)} />
+            ))}
           </View>
         </View>
 
-        {/* Category Progress */}
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Categories</Text>
-        {CATEGORIES.map((cat) => {
-          const catStat = stats.categoryStats[cat];
-          const pct = catStat && catStat.total > 0 ? catStat.correct / catStat.total : 0;
-          return (
-            <View
-              key={cat}
-              style={[styles.catCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-            >
-              <View style={styles.catRow}>
-                <Text style={[styles.catName, { color: colors.foreground }]}>{cat}</Text>
-                <Text style={[styles.catPct, { color: catStat ? colors.primary : colors.mutedForeground }]}>
-                  {catStat ? `${catStat.correct}/${catStat.total}` : "Not started"}
-                </Text>
-              </View>
-              <View style={[styles.barBg, { backgroundColor: colors.secondary }]}>
-                <View
-                  style={[
-                    styles.barFill,
-                    { backgroundColor: colors.primary, width: `${pct * 100}%` as any },
-                  ]}
-                />
-              </View>
+        {/* ── Last quiz recap ── */}
+        {quizHistory[0] && (
+          <View style={[styles.recapCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.recapLeft}>
+              <Text style={[styles.recapLabel, { color: colors.mutedForeground }]}>LAST QUIZ</Text>
+              <Text style={[styles.recapScore, { color: colors.foreground }]}>
+                {quizHistory[0].score}/{quizHistory[0].total}
+              </Text>
+              <Text style={[styles.recapPct, { color: colors.primary }]}>
+                {Math.round((quizHistory[0].score / quizHistory[0].total) * 100)}% correct
+              </Text>
             </View>
-          );
-        })}
-
-        {/* Quiz Settings Summary */}
-        <View style={[styles.settingsSummary, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-          <Text style={[styles.settingsLabel, { color: colors.mutedForeground }]}>
-            {settings.questionsPerQuiz} questions
-            {settings.timerEnabled ? `  •  ${settings.timePerQuestion}s per question` : "  •  No timer"}
-          </Text>
-        </View>
+            <Pressable
+              onPress={() =>
+                router.push({ pathname: "/review", params: { resultsJson: JSON.stringify(quizHistory[0]) } })
+              }
+              style={[styles.recapBtn, { backgroundColor: colors.primary }]}
+            >
+              <Feather name="rotate-ccw" size={14} color="#fff" />
+              <Text style={styles.recapBtnTxt}>Review</Text>
+            </Pressable>
+          </View>
+        )}
       </ScrollView>
 
-      {/* Start Quiz Button — fixed at bottom */}
-      <View
-        style={[
-          styles.startBtnContainer,
-          {
-            paddingBottom: Platform.OS === "web" ? 100 : insets.bottom + 90,
-            paddingHorizontal: 24,
-          },
-        ]}
-      >
-        <Pressable
-          onPress={() => router.push("/quiz")}
-          style={({ pressed }) => [
-            styles.startBtn,
-            { opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <LinearGradient
-            colors={["#7C3AED", "#A855F7"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.startBtnGradient}
-          >
-            <Text style={styles.startBtnText}>Start Quiz</Text>
-          </LinearGradient>
-        </Pressable>
-      </View>
-
-      {/* Slide-out drawer — rendered last so it sits on top */}
+      {/* Drawer */}
       <DrawerMenu
         isOpen={drawerOpen}
         onClose={() => setDrawerOpen(false)}
@@ -210,161 +425,199 @@ export default function HomeScreen() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scroll: { paddingHorizontal: 20 },
+  screen: { flex: 1 },
 
-  header: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 20,
-  },
-  menuBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 4,
-  },
-  appTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 32,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    marginTop: 2,
-  },
-
-  card: {
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-  },
-  cardLabel: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 10,
-    letterSpacing: 1.2,
-    marginBottom: 10,
-  },
-  lastQuizRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  scoreText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 28,
-  },
-  scorePct: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    marginTop: 2,
-  },
-  reviewBtn: {
-    borderWidth: 1.5,
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  reviewBtnText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-  },
-  welcomeText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  statsRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 24,
-  },
-  statPill: {
-    flex: 1,
-    borderRadius: 12,
-    padding: 12,
-    alignItems: "center",
-    borderWidth: 1,
-  },
-  statPillNum: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 20,
-  },
-  statPillLabel: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
-    marginTop: 2,
-  },
-  sectionTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  catCard: {
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-  },
-  catRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  catName: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 14,
-  },
-  catPct: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-  },
-  barBg: {
-    height: 4,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  barFill: {
-    height: 4,
-    borderRadius: 2,
-  },
-  settingsSummary: {
-    borderRadius: 10,
-    padding: 12,
-    alignItems: "center",
-    marginTop: 4,
-    marginBottom: 16,
-    borderWidth: 1,
-  },
-  settingsLabel: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-  },
-  startBtnContainer: {
+  // Floating header
+  floatingHeader: {
     position: "absolute",
+    top: 0,
     left: 0,
     right: 0,
-    bottom: 0,
+    zIndex: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    gap: 10,
   },
-  startBtn: {
-    borderRadius: 16,
+  menuBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  floatingTitle: {
+    flex: 1,
+    fontFamily: "Inter_700Bold",
+    fontSize: 20,
+    color: "#fff",
+    letterSpacing: -0.3,
+  },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  accuracyPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  accuracyTxt: { fontSize: 12, fontFamily: "Inter_700Bold" },
+  searchBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  // Hero
+  hero: {
+    height: 320,
+    marginBottom: 0,
+  },
+  heroGradient: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    padding: 24,
+    gap: 20,
+  },
+  heroIconWrap: {
+    width: 90,
+    height: 90,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+  },
+  heroMeta: { flex: 1 },
+  heroBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  heroBadgeTxt: { fontSize: 9, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: 1 },
+  heroTitle: { fontSize: 22, fontFamily: "Inter_700Bold", color: "#fff", marginBottom: 4 },
+  heroSub: { fontSize: 13, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.75)", marginBottom: 4 },
+  heroCount: { fontSize: 11, fontFamily: "Inter_500Medium", color: "rgba(255,255,255,0.55)", marginBottom: 16 },
+  heroBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 24,
+  },
+  heroBtnTxt: { fontSize: 14, fontFamily: "Inter_700Bold" },
+
+  // Stats strip
+  statsStrip: {
+    flexDirection: "row",
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 14,
+  },
+  statItem: { flex: 1, alignItems: "center" },
+  statNum: { fontSize: 20, fontFamily: "Inter_700Bold" },
+  statLbl: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 2 },
+  statDivider: { width: 1, marginVertical: 4 },
+
+  // Section
+  section: { marginTop: 28 },
+  rowHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 16,
+    marginBottom: 14,
+  },
+  rowAccentBar: { width: 4, height: 18, borderRadius: 2 },
+  rowTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
+
+  hScroll: { paddingHorizontal: 16, gap: 12 },
+
+  // Horizontal subject card
+  subjectCard: { gap: 8 },
+  subjectCardImg: {
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
     overflow: "hidden",
   },
-  startBtnGradient: {
-    paddingVertical: 18,
+  subjectBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "#7C3AED",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  subjectBadgeTxt: { fontSize: 8, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: 0.8 },
+  subjectCardTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#E5E7EB" },
+  subjectCardSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "#6B7280" },
+
+  // Large grid
+  largeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  largeCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  largeCardTop: {
+    height: 110,
     alignItems: "center",
+    justifyContent: "center",
   },
-  startBtnText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 17,
-    color: "#FFFFFF",
-    letterSpacing: 0.3,
+  largeCardBadge: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
+  largeCardBadgeTxt: { fontSize: 8, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: 0.8 },
+  largeCardBody: { padding: 12, gap: 4 },
+  largeCardTitle: { fontSize: 13, fontFamily: "Inter_700Bold", lineHeight: 18 },
+  largeCardSub: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  largeCardCount: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginTop: 4 },
+  largeCardCountTxt: { fontSize: 10, fontFamily: "Inter_700Bold" },
+
+  // Last quiz recap
+  recapCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: 16,
+    marginTop: 28,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+  },
+  recapLeft: { gap: 2 },
+  recapLabel: { fontSize: 9, fontFamily: "Inter_600SemiBold", letterSpacing: 1.2, marginBottom: 4 },
+  recapScore: { fontSize: 26, fontFamily: "Inter_700Bold" },
+  recapPct: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  recapBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  recapBtnTxt: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#fff" },
 });
