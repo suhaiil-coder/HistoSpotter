@@ -197,6 +197,8 @@ export default function HomeScreen() {
         onSelect={(id) => {
           if (id === "head-neck" || id === "charts-quiz") {
             router.push("/head-neck-quiz");
+          } else if (id === "upper-limb") {
+            router.push("/upper-limb-quiz");
           }
         }}
       />
