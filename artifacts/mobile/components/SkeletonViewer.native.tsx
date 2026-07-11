@@ -1,18 +1,17 @@
 /**
  * SkeletonViewer — NATIVE (iOS / Android)
- * Metro picks this file automatically for native platforms.
- * Web gets SkeletonViewer.tsx (SVG fallback).
+ * Loads the NIH skeleton GLB from the API server over HTTP.
+ * No Metro asset bundling, no expo-asset, no require('../assets/skeleton.glb').
+ * Metro picks this file automatically for iOS/Android.
+ * Web gets SkeletonViewer.tsx (SVG).
  */
 import React, {
   forwardRef,
-  useEffect,
   useImperativeHandle,
   useRef,
-  useState,
 } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { StyleSheet } from "react-native";
 import { WebView } from "react-native-webview";
-import { Asset } from "expo-asset";
 
 export interface BoneInfo {
   name: string; latinName: string; region: string; boneId: string;
@@ -21,9 +20,11 @@ export interface SkeletonViewerRef {
   resetView: () => void; setMode: (m: string) => void;
 }
 
-// Must be module-level so Metro statically includes the GLB in the bundle
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const SKELETON_MODULE = require("../assets/skeleton.glb");
+// GLB is served as a static file by the Express API server.
+// EXPO_PUBLIC_DOMAIN is injected at bundle time by the Expo workflow.
+const DOMAIN: string =
+  (process.env["EXPO_PUBLIC_DOMAIN"] as string) ?? "localhost";
+const GLB_URL = `https://${DOMAIN}/api/assets/skeleton.glb`;
 
 function boneAt(ny: number): BoneInfo {
   if (ny < 0.13) return { name:"Skull",          latinName:"Calvaria",             region:"skull",            boneId:"skull"          };
@@ -36,8 +37,7 @@ function boneAt(ny: number): BoneInfo {
   return                 { name:"Foot Bones",    latinName:"Ossa pedis",           region:"lower-limb",       boneId:"tibia"          };
 }
 
-function buildHtml(glbUrl: string): string {
-  return `<!DOCTYPE html>
+const HTML = `<!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -56,6 +56,7 @@ canvas{display:block;width:100%!important;height:100%!important}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
 (function(){
+  var GLB_URL="__GLB_URL__";
   var W=window.innerWidth,H=window.innerHeight;
   var renderer=new THREE.WebGLRenderer({antialias:true});
   renderer.setSize(W,H);
@@ -78,7 +79,7 @@ canvas{display:block;width:100%!important;height:100%!important}
   scene.add(new THREE.AmbientLight(0xfff8f0,0.3));
 
   var mat=new THREE.MeshStandardMaterial({color:0xEBE0CC,roughness:0.72,metalness:0});
-  new THREE.GLTFLoader().load(${JSON.stringify(glbUrl)},
+  new THREE.GLTFLoader().load(GLB_URL,
     function(gltf){
       var m=gltf.scene;
       var box=new THREE.Box3().setFromObject(m);
@@ -91,7 +92,7 @@ canvas{display:block;width:100%!important;height:100%!important}
       document.getElementById('msg').style.display='none';
     },
     undefined,
-    function(e){document.getElementById('msg').textContent='Error: '+(e.message||e);}
+    function(e){document.getElementById('msg').textContent='Error: '+(e.message||String(e));}
   );
 
   renderer.domElement.addEventListener('click',function(e){
@@ -100,7 +101,10 @@ canvas{display:block;width:100%!important;height:100%!important}
       window.ReactNativeWebView.postMessage(JSON.stringify({type:'tap',ny:e.clientY/H}));
   });
 
-  function onMsg(e){try{var d=JSON.parse(e.data);if(d.cmd==='reset'){controls.reset();controls.autoRotate=true;}}catch(x){}}
+  function onMsg(e){
+    try{var d=JSON.parse(e.data);if(d.cmd==='reset'){controls.reset();controls.autoRotate=true;}}
+    catch(x){}
+  }
   document.addEventListener('message',onMsg);
   window.addEventListener('message',onMsg);
 
@@ -115,59 +119,36 @@ canvas{display:block;width:100%!important;height:100%!important}
 </script>
 </body>
 </html>`;
-}
 
 const SkeletonViewer = forwardRef<
   SkeletonViewerRef,
   { onBoneSelect: (b: BoneInfo | null) => void }
 >(function SkeletonViewer({ onBoneSelect }, ref) {
-  const [glbUri, setGlbUri] = useState<string | null>(null);
-  const [error,  setError]  = useState<string | null>(null);
   const wvRef = useRef<any>(null);
 
   useImperativeHandle(ref, () => ({
-    resetView() { onBoneSelect(null); wvRef.current?.postMessage(JSON.stringify({ cmd: "reset" })); },
+    resetView() {
+      onBoneSelect(null);
+      wvRef.current?.postMessage(JSON.stringify({ cmd: "reset" }));
+    },
     setMode() {},
   }));
 
-  useEffect(() => {
-    Asset.fromModule(SKELETON_MODULE)
-      .downloadAsync()
-      .then(a => {
-        const uri = a.localUri ?? a.uri;
-        if (!uri) throw new Error("Asset URI missing");
-        setGlbUri(uri);
-      })
-      .catch((e: unknown) => setError(String((e as Error)?.message ?? e)));
-  }, []);
-
-  if (error) return (
-    <View style={[s.root, s.center]}>
-      <Text style={s.err}>⚠ {error}</Text>
-    </View>
-  );
-
-  if (!glbUri) return (
-    <View style={[s.root, s.center]}>
-      <ActivityIndicator color="#63B3ED" size="large" />
-      <Text style={s.hint}>Preparing 3D model…</Text>
-    </View>
-  );
+  const html = HTML.replace("__GLB_URL__", GLB_URL);
 
   return (
     <WebView
       ref={wvRef}
       style={s.root}
       originWhitelist={["*"]}
-      source={{ html: buildHtml(glbUri), baseUrl: "" }}
-      allowFileAccess
-      allowFileAccessFromFileURLs
-      allowUniversalAccessFromFileURLs
+      source={{ html, baseUrl: "" }}
       javaScriptEnabled
       domStorageEnabled
       onMessage={e => {
-        try { const d = JSON.parse(e.nativeEvent.data); if (d.type === "tap") onBoneSelect(boneAt(d.ny)); }
-        catch { /* ignore */ }
+        try {
+          const d = JSON.parse(e.nativeEvent.data);
+          if (d.type === "tap") onBoneSelect(boneAt(d.ny));
+        } catch { /* ignore */ }
       }}
       scrollEnabled={false}
       bounces={false}
@@ -179,8 +160,5 @@ const SkeletonViewer = forwardRef<
 export default SkeletonViewer;
 
 const s = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: "#000" },
-  center: { alignItems: "center", justifyContent: "center", gap: 12 },
-  hint:   { color: "#888", fontSize: 13, marginTop: 8 },
-  err:    { color: "#FC8181", fontSize: 13, textAlign: "center", paddingHorizontal: 24 },
+  root: { flex: 1, backgroundColor: "#000" },
 });
