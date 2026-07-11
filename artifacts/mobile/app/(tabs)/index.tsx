@@ -1,4 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -11,7 +12,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
@@ -19,15 +20,25 @@ import DrawerMenu from "@/components/DrawerMenu";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 
-// ─── Subject catalogue ────────────────────────────────────────────────────────
+// ─── Thumbnails ───────────────────────────────────────────────────────────────
 
-type IconName = React.ComponentProps<typeof Feather>["name"];
+const THUMBNAILS: Record<string, any> = {
+  histology:     require("@/assets/images/thumbnails/histology.png"),
+  "head-neck":   require("@/assets/images/thumbnails/head_neck.png"),
+  "upper-limb":  require("@/assets/images/thumbnails/upper_limb.png"),
+  thorax:        require("@/assets/images/thumbnails/thorax.png"),
+  abdomen:       require("@/assets/images/thumbnails/abdomen.png"),
+  neuroanatomy:  require("@/assets/images/thumbnails/neuroanatomy.png"),
+  embryology:    require("@/assets/images/thumbnails/embryology.png"),
+  osteology:     require("@/assets/images/thumbnails/osteology.png"),
+};
+
+// ─── Subject catalogue ────────────────────────────────────────────────────────
 
 interface Subject {
   id: string;
   title: string;
   subtitle: string;
-  icon: IconName;
   color: string;
   accent: string;
   questionCount: number;
@@ -41,7 +52,6 @@ const SUBJECTS: Subject[] = [
     id: "histology",
     title: "Histology",
     subtitle: "Spot-diagnosis quiz",
-    icon: "aperture",
     color: "#7C3AED",
     accent: "#A855F7",
     questionCount: 60,
@@ -52,7 +62,6 @@ const SUBJECTS: Subject[] = [
     id: "head-neck",
     title: "Head & Neck",
     subtitle: "Gross anatomy · Spotters",
-    icon: "user",
     color: "#0EA5E9",
     accent: "#38BDF8",
     questionCount: 30,
@@ -62,7 +71,6 @@ const SUBJECTS: Subject[] = [
     id: "upper-limb",
     title: "Upper Limb",
     subtitle: "Gross anatomy · Spotters",
-    icon: "arrow-up-right",
     color: "#10B981",
     accent: "#34D399",
     questionCount: 31,
@@ -72,7 +80,6 @@ const SUBJECTS: Subject[] = [
     id: "thorax",
     title: "Thorax",
     subtitle: "Gross anatomy · Spotters",
-    icon: "activity",
     color: "#F59E0B",
     accent: "#FCD34D",
     questionCount: 29,
@@ -82,7 +89,6 @@ const SUBJECTS: Subject[] = [
     id: "abdomen",
     title: "Abdomen & Pelvis",
     subtitle: "Gross anatomy · Spotters",
-    icon: "circle",
     color: "#EF4444",
     accent: "#F87171",
     questionCount: 60,
@@ -93,7 +99,6 @@ const SUBJECTS: Subject[] = [
     id: "neuroanatomy",
     title: "Neuroanatomy",
     subtitle: "Coming soon",
-    icon: "cpu",
     color: "#8B5CF6",
     accent: "#A78BFA",
     questionCount: 0,
@@ -102,7 +107,6 @@ const SUBJECTS: Subject[] = [
     id: "embryology",
     title: "Embryology",
     subtitle: "Coming soon",
-    icon: "git-branch",
     color: "#EC4899",
     accent: "#F472B6",
     questionCount: 0,
@@ -111,64 +115,91 @@ const SUBJECTS: Subject[] = [
     id: "osteology",
     title: "Osteology",
     subtitle: "Coming soon",
-    icon: "box",
     color: "#6366F1",
     accent: "#818CF8",
     questionCount: 0,
   },
 ];
 
-const FEATURED = SUBJECTS[4]; // Abdomen — newest
-
-const RECENTLY_ADDED = SUBJECTS.filter((s) => s.isNew || s.id === "thorax" || s.id === "upper-limb");
+const FEATURED = SUBJECTS[4];
+const RECENTLY_ADDED = SUBJECTS.filter(
+  (s) => s.isNew || s.id === "thorax" || s.id === "upper-limb"
+);
 
 // ─── Hero Card ────────────────────────────────────────────────────────────────
 
 function HeroCard({ subject, onPress }: { subject: Subject; onPress: () => void }) {
   const colors = useColors();
+  const thumb = THUMBNAILS[subject.id];
+
   return (
     <Pressable onPress={onPress} style={styles.hero}>
+      {/* Background image */}
+      {thumb && (
+        <Image
+          source={thumb}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          transition={300}
+        />
+      )}
+      {/* Dark gradient overlay for readability */}
       <LinearGradient
-        colors={[subject.color + "CC", subject.accent + "88", "#0D0D14"]}
+        colors={["rgba(0,0,0,0.15)", "rgba(0,0,0,0.55)", "rgba(0,0,0,0.88)"]}
         start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.heroGradient}
-      >
-        {/* Big icon */}
-        <View style={[styles.heroIconWrap, { backgroundColor: "rgba(255,255,255,0.12)" }]}>
-          <Feather name={subject.icon} size={52} color="#fff" />
-        </View>
+        end={{ x: 0, y: 1 }}
+        style={[StyleSheet.absoluteFill]}
+      />
+      {/* Accent tint strip at top */}
+      <LinearGradient
+        colors={[subject.color + "55", "transparent"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={[StyleSheet.absoluteFill]}
+      />
 
-        {/* Meta */}
-        <View style={styles.heroMeta}>
-          {subject.isNew && (
-            <View style={[styles.heroBadge, { backgroundColor: subject.accent }]}>
-              <Text style={styles.heroBadgeTxt}>NEW</Text>
-            </View>
-          )}
-          <Text style={styles.heroTitle}>{subject.title}</Text>
-          <Text style={styles.heroSub}>{subject.subtitle}</Text>
-          <Text style={styles.heroCount}>{subject.questionCount} spotters</Text>
+      <View style={styles.heroContent}>
+        {subject.isNew && (
+          <View style={[styles.heroBadge, { backgroundColor: subject.accent }]}>
+            <Text style={styles.heroBadgeTxt}>NEW</Text>
+          </View>
+        )}
+        {subject.badge && !subject.isNew && (
+          <View style={[styles.heroBadge, { backgroundColor: subject.color }]}>
+            <Text style={styles.heroBadgeTxt}>{subject.badge}</Text>
+          </View>
+        )}
+        <Text style={styles.heroTitle}>{subject.title}</Text>
+        <Text style={styles.heroSub}>{subject.subtitle}</Text>
+        <Text style={styles.heroCount}>{subject.questionCount} spotters</Text>
 
-          <Pressable
-            onPress={onPress}
-            style={[styles.heroBtn, { backgroundColor: "#fff" }]}
-          >
-            <Feather name="play" size={14} color={subject.color} />
-            <Text style={[styles.heroBtnTxt, { color: subject.color }]}>Start Now</Text>
-          </Pressable>
-        </View>
-      </LinearGradient>
+        <Pressable
+          onPress={onPress}
+          style={[styles.heroBtn, { backgroundColor: "#fff" }]}
+        >
+          <Feather name="play" size={14} color={subject.color} />
+          <Text style={[styles.heroBtnTxt, { color: subject.color }]}>Start Now</Text>
+        </Pressable>
+      </View>
     </Pressable>
   );
 }
 
 // ─── Horizontal subject card ──────────────────────────────────────────────────
 
-function SubjectCard({ subject, onPress, size = "md" }: { subject: Subject; onPress: () => void; size?: "sm" | "md" }) {
+function SubjectCard({
+  subject,
+  onPress,
+  size = "md",
+}: {
+  subject: Subject;
+  onPress: () => void;
+  size?: "sm" | "md";
+}) {
   const w = size === "sm" ? 130 : 160;
   const h = size === "sm" ? 90 : 110;
   const disabled = !subject.route;
+  const thumb = THUMBNAILS[subject.id];
 
   return (
     <Pressable
@@ -178,16 +209,34 @@ function SubjectCard({ subject, onPress, size = "md" }: { subject: Subject; onPr
         { width: w, opacity: disabled ? 0.45 : pressed ? 0.75 : 1 },
       ]}
     >
-      {/* Image area */}
-      <LinearGradient
-        colors={[subject.color, subject.accent]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.subjectCardImg, { height: h }]}
-      >
-        <Feather name={subject.icon} size={size === "sm" ? 28 : 34} color="rgba(255,255,255,0.9)" />
+      {/* Image / gradient tile */}
+      <View style={[styles.subjectCardImg, { height: h, borderRadius: 12, overflow: "hidden" }]}>
+        {thumb ? (
+          <>
+            <Image
+              source={thumb}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              transition={200}
+            />
+            <LinearGradient
+              colors={["transparent", subject.color + "CC"]}
+              start={{ x: 0, y: 0.4 }}
+              end={{ x: 0, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </>
+        ) : (
+          <LinearGradient
+            colors={[subject.color, subject.accent]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        )}
+
         {subject.badge && (
-          <View style={styles.subjectBadge}>
+          <View style={[styles.subjectBadge, { backgroundColor: subject.color }]}>
             <Text style={styles.subjectBadgeTxt}>{subject.badge}</Text>
           </View>
         )}
@@ -196,10 +245,12 @@ function SubjectCard({ subject, onPress, size = "md" }: { subject: Subject; onPr
             <Text style={styles.subjectBadgeTxt}>NEW</Text>
           </View>
         )}
-      </LinearGradient>
+      </View>
 
       {/* Text below */}
-      <Text style={styles.subjectCardTitle} numberOfLines={1}>{subject.title}</Text>
+      <Text style={styles.subjectCardTitle} numberOfLines={1}>
+        {subject.title}
+      </Text>
       <Text style={styles.subjectCardSub} numberOfLines={1}>
         {subject.questionCount > 0 ? `${subject.questionCount} spotters` : "Coming soon"}
       </Text>
@@ -213,36 +264,74 @@ function LargeCard({ subject, onPress }: { subject: Subject; onPress: () => void
   const colors = useColors();
   const disabled = !subject.route;
   const cardW = (SCREEN_W - 48) / 2;
+  const thumb = THUMBNAILS[subject.id];
 
   return (
     <Pressable
       onPress={disabled ? undefined : onPress}
       style={({ pressed }) => [
         styles.largeCard,
-        { width: cardW, opacity: disabled ? 0.4 : pressed ? 0.75 : 1, backgroundColor: colors.card, borderColor: colors.border },
+        {
+          width: cardW,
+          opacity: disabled ? 0.4 : pressed ? 0.75 : 1,
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+        },
       ]}
     >
-      {/* Top icon area */}
-      <LinearGradient
-        colors={[subject.color + "EE", subject.accent + "AA"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.largeCardTop}
-      >
-        <Feather name={subject.icon} size={40} color="rgba(255,255,255,0.95)" />
+      {/* Top image area */}
+      <View style={[styles.largeCardTop, { overflow: "hidden" }]}>
+        {thumb ? (
+          <>
+            <Image
+              source={thumb}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              transition={200}
+            />
+            {/* Tinted gradient overlay */}
+            <LinearGradient
+              colors={[subject.color + "44", subject.accent + "88"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </>
+        ) : (
+          <LinearGradient
+            colors={[subject.color + "EE", subject.accent + "AA"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        )}
+
         {(subject.isNew || subject.badge) && (
-          <View style={[styles.largeCardBadge, { backgroundColor: subject.isNew ? "#EF4444" : "#F59E0B" }]}>
-            <Text style={styles.largeCardBadgeTxt}>{subject.isNew ? "NEW" : subject.badge}</Text>
+          <View
+            style={[
+              styles.largeCardBadge,
+              { backgroundColor: subject.isNew ? "#EF4444" : subject.color },
+            ]}
+          >
+            <Text style={styles.largeCardBadgeTxt}>
+              {subject.isNew ? "NEW" : subject.badge}
+            </Text>
           </View>
         )}
-      </LinearGradient>
+      </View>
 
       {/* Content below */}
       <View style={styles.largeCardBody}>
-        <Text style={[styles.largeCardTitle, { color: colors.foreground }]} numberOfLines={2}>
+        <Text
+          style={[styles.largeCardTitle, { color: colors.foreground }]}
+          numberOfLines={2}
+        >
           {subject.title}
         </Text>
-        <Text style={[styles.largeCardSub, { color: colors.mutedForeground }]} numberOfLines={1}>
+        <Text
+          style={[styles.largeCardSub, { color: colors.mutedForeground }]}
+          numberOfLines={1}
+        >
           {subject.subtitle}
         </Text>
         {subject.questionCount > 0 && (
@@ -263,13 +352,15 @@ function RowHeader({ title, accent }: { title: string; accent?: boolean }) {
   const colors = useColors();
   return (
     <View style={styles.rowHeader}>
-      {accent && <View style={[styles.rowAccentBar, { backgroundColor: colors.primary }]} />}
+      {accent && (
+        <View style={[styles.rowAccentBar, { backgroundColor: colors.primary }]} />
+      )}
       <Text style={[styles.rowTitle, { color: colors.foreground }]}>{title}</Text>
     </View>
   );
 }
 
-// ─── Main screen ─────────────────────────────────────────────────────────────
+// ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -284,7 +375,9 @@ export default function HomeScreen() {
       ? Math.round((stats.totalCorrect / stats.totalQuestions) * 100)
       : null;
 
-  const continueLearning = SUBJECTS.filter((s) => s.route && s.id !== "histology").slice(0, 5);
+  const continueLearning = SUBJECTS.filter(
+    (s) => s.route && s.id !== "histology"
+  ).slice(0, 5);
 
   function navigate(subject: Subject) {
     if (!subject.route) return;
@@ -293,12 +386,14 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
-
-      {/* ── Floating header (sits above scroll) ── */}
+      {/* ── Floating header ── */}
       <View style={[styles.floatingHeader, { paddingTop: topInset }]}>
         <Pressable
           onPress={() => setDrawerOpen(true)}
-          style={({ pressed }) => [styles.menuBtn, { backgroundColor: "rgba(0,0,0,0.45)", opacity: pressed ? 0.7 : 1 }]}
+          style={({ pressed }) => [
+            styles.menuBtn,
+            { backgroundColor: "rgba(0,0,0,0.5)", opacity: pressed ? 0.7 : 1 },
+          ]}
           hitSlop={8}
         >
           <Feather name="menu" size={20} color="#fff" />
@@ -311,12 +406,14 @@ export default function HomeScreen() {
         <View style={styles.headerRight}>
           {accuracy !== null && (
             <View style={[styles.accuracyPill, { backgroundColor: colors.primary + "33" }]}>
-              <Text style={[styles.accuracyTxt, { color: colors.primary }]}>{accuracy}%</Text>
+              <Text style={[styles.accuracyTxt, { color: colors.primary }]}>
+                {accuracy}%
+              </Text>
             </View>
           )}
           <Pressable
             onPress={() => router.push("/quiz")}
-            style={[styles.searchBtn, { backgroundColor: colors.primary }]}
+            style={[styles.playBtn, { backgroundColor: colors.primary }]}
           >
             <Feather name="play" size={16} color="#fff" />
           </Pressable>
@@ -325,26 +422,41 @@ export default function HomeScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: Platform.OS === "web" ? 100 : insets.bottom + 100 }}
+        contentContainerStyle={{
+          paddingBottom: Platform.OS === "web" ? 100 : insets.bottom + 100,
+        }}
       >
         {/* ── Hero ── */}
         <HeroCard subject={FEATURED} onPress={() => navigate(FEATURED)} />
 
         {/* ── Stats strip ── */}
         {stats.totalQuizzes > 0 && (
-          <View style={[styles.statsStrip, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.statsStrip,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
             <View style={styles.statItem}>
-              <Text style={[styles.statNum, { color: colors.primary }]}>{stats.totalQuizzes}</Text>
-              <Text style={[styles.statLbl, { color: colors.mutedForeground }]}>Quizzes</Text>
+              <Text style={[styles.statNum, { color: colors.primary }]}>
+                {stats.totalQuizzes}
+              </Text>
+              <Text style={[styles.statLbl, { color: colors.mutedForeground }]}>
+                Quizzes
+              </Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
               <Text style={[styles.statNum, { color: colors.primary }]}>{accuracy}%</Text>
-              <Text style={[styles.statLbl, { color: colors.mutedForeground }]}>Accuracy</Text>
+              <Text style={[styles.statLbl, { color: colors.mutedForeground }]}>
+                Accuracy
+              </Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
-              <Text style={[styles.statNum, { color: colors.primary }]}>{stats.bestScore}%</Text>
+              <Text style={[styles.statNum, { color: colors.primary }]}>
+                {stats.bestScore}%
+              </Text>
               <Text style={[styles.statLbl, { color: colors.mutedForeground }]}>Best</Text>
             </View>
           </View>
@@ -353,7 +465,11 @@ export default function HomeScreen() {
         {/* ── Continue Learning ── */}
         <View style={styles.section}>
           <RowHeader title="Continue Learning" accent />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.hScroll}
+          >
             {continueLearning.map((s) => (
               <SubjectCard key={s.id} subject={s} onPress={() => navigate(s)} />
             ))}
@@ -363,9 +479,18 @@ export default function HomeScreen() {
         {/* ── Recently Added ── */}
         <View style={styles.section}>
           <RowHeader title="Recently Added" />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScroll}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.hScroll}
+          >
             {RECENTLY_ADDED.map((s) => (
-              <SubjectCard key={s.id} subject={s} size="sm" onPress={() => navigate(s)} />
+              <SubjectCard
+                key={s.id}
+                subject={s}
+                size="sm"
+                onPress={() => navigate(s)}
+              />
             ))}
           </ScrollView>
         </View>
@@ -382,9 +507,16 @@ export default function HomeScreen() {
 
         {/* ── Last quiz recap ── */}
         {quizHistory[0] && (
-          <View style={[styles.recapCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.recapCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
             <View style={styles.recapLeft}>
-              <Text style={[styles.recapLabel, { color: colors.mutedForeground }]}>LAST QUIZ</Text>
+              <Text style={[styles.recapLabel, { color: colors.mutedForeground }]}>
+                LAST QUIZ
+              </Text>
               <Text style={[styles.recapScore, { color: colors.foreground }]}>
                 {quizHistory[0].score}/{quizHistory[0].total}
               </Text>
@@ -394,7 +526,10 @@ export default function HomeScreen() {
             </View>
             <Pressable
               onPress={() =>
-                router.push({ pathname: "/review", params: { resultsJson: JSON.stringify(quizHistory[0]) } })
+                router.push({
+                  pathname: "/review",
+                  params: { resultsJson: JSON.stringify(quizHistory[0]) },
+                })
               }
               style={[styles.recapBtn, { backgroundColor: colors.primary }]}
             >
@@ -430,7 +565,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
 
-  // Floating header
   floatingHeader: {
     position: "absolute",
     top: 0,
@@ -458,13 +592,9 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
-  accuracyPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
+  accuracyPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   accuracyTxt: { fontSize: 12, fontFamily: "Inter_700Bold" },
-  searchBtn: {
+  playBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -473,44 +603,45 @@ const styles = StyleSheet.create({
   },
 
   // Hero
-  hero: {
-    height: 320,
-    marginBottom: 0,
-  },
-  heroGradient: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "flex-end",
-    padding: 24,
-    gap: 20,
-  },
-  heroIconWrap: {
-    width: 90,
-    height: 90,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  heroMeta: { flex: 1 },
+  hero: { height: 340, justifyContent: "flex-end" },
+  heroContent: { padding: 24, gap: 4 },
   heroBadge: {
     alignSelf: "flex-start",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  heroBadgeTxt: { fontSize: 9, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: 1 },
-  heroTitle: { fontSize: 22, fontFamily: "Inter_700Bold", color: "#fff", marginBottom: 4 },
-  heroSub: { fontSize: 13, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.75)", marginBottom: 4 },
-  heroCount: { fontSize: 11, fontFamily: "Inter_500Medium", color: "rgba(255,255,255,0.55)", marginBottom: 16 },
+  heroBadgeTxt: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+    letterSpacing: 1,
+  },
+  heroTitle: {
+    fontSize: 26,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+    marginBottom: 4,
+  },
+  heroSub: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.75)",
+  },
+  heroCount: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    color: "rgba(255,255,255,0.5)",
+    marginBottom: 16,
+  },
   heroBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     alignSelf: "flex-start",
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 11,
     borderRadius: 24,
   },
   heroBtnTxt: { fontSize: 14, fontFamily: "Inter_700Bold" },
@@ -529,7 +660,7 @@ const styles = StyleSheet.create({
   statLbl: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 2 },
   statDivider: { width: 1, marginVertical: 4 },
 
-  // Section
+  // Sections
   section: { marginTop: 28 },
   rowHeader: {
     flexDirection: "row",
@@ -540,28 +671,30 @@ const styles = StyleSheet.create({
   },
   rowAccentBar: { width: 4, height: 18, borderRadius: 2 },
   rowTitle: { fontSize: 17, fontFamily: "Inter_700Bold" },
-
   hScroll: { paddingHorizontal: 16, gap: 12 },
 
   // Horizontal subject card
   subjectCard: { gap: 8 },
-  subjectCardImg: {
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
+  subjectCardImg: { alignItems: "center", justifyContent: "center" },
   subjectBadge: {
     position: "absolute",
     top: 8,
     right: 8,
-    backgroundColor: "#7C3AED",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 5,
   },
-  subjectBadgeTxt: { fontSize: 8, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: 0.8 },
-  subjectCardTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#E5E7EB" },
+  subjectBadgeTxt: {
+    fontSize: 8,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+    letterSpacing: 0.8,
+  },
+  subjectCardTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: "#E5E7EB",
+  },
   subjectCardSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "#6B7280" },
 
   // Large grid
@@ -571,16 +704,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 12,
   },
-  largeCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  largeCardTop: {
-    height: 110,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  largeCard: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
+  largeCardTop: { height: 120 },
   largeCardBadge: {
     position: "absolute",
     top: 10,
@@ -589,11 +714,22 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 6,
   },
-  largeCardBadgeTxt: { fontSize: 8, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: 0.8 },
+  largeCardBadgeTxt: {
+    fontSize: 8,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+    letterSpacing: 0.8,
+  },
   largeCardBody: { padding: 12, gap: 4 },
   largeCardTitle: { fontSize: 13, fontFamily: "Inter_700Bold", lineHeight: 18 },
   largeCardSub: { fontSize: 11, fontFamily: "Inter_400Regular" },
-  largeCardCount: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginTop: 4 },
+  largeCardCount: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginTop: 4,
+  },
   largeCardCountTxt: { fontSize: 10, fontFamily: "Inter_700Bold" },
 
   // Last quiz recap
@@ -608,7 +744,12 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   recapLeft: { gap: 2 },
-  recapLabel: { fontSize: 9, fontFamily: "Inter_600SemiBold", letterSpacing: 1.2, marginBottom: 4 },
+  recapLabel: {
+    fontSize: 9,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 1.2,
+    marginBottom: 4,
+  },
   recapScore: { fontSize: 26, fontFamily: "Inter_700Bold" },
   recapPct: { fontSize: 13, fontFamily: "Inter_500Medium" },
   recapBtn: {

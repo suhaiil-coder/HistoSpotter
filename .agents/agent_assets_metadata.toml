@@ -48,6 +48,54 @@ uri = "file://artifacts/mobile/assets/images/histo_skin.png"
 type = "image"
 title = "skin histology slide"
 
+[[generated]]
+id = "-amUj53asbnZyDk-ESsdx"
+uri = "file://artifacts/mobile/assets/images/thumbnails/histology.png"
+type = "image"
+title = "histology slide thumbnail"
+
+[[generated]]
+id = "_xolnFtOfBgb-Z_FE5Klg"
+uri = "file://artifacts/mobile/assets/images/thumbnails/head_neck.png"
+type = "image"
+title = "head neck anatomy thumbnail"
+
+[[generated]]
+id = "N8w1DdXt-rgDY-xKJN2VO"
+uri = "file://artifacts/mobile/assets/images/thumbnails/upper_limb.png"
+type = "image"
+title = "upper limb anatomy thumbnail"
+
+[[generated]]
+id = "29Q6gr97zorB4PgFUO5JS"
+uri = "file://artifacts/mobile/assets/images/thumbnails/thorax.png"
+type = "image"
+title = "thorax heart anatomy thumbnail"
+
+[[generated]]
+id = "ROGycwUfJmv_fITNJ4rWc"
+uri = "file://artifacts/mobile/assets/images/thumbnails/abdomen.png"
+type = "image"
+title = "abdomen anatomy thumbnail"
+
+[[generated]]
+id = "Plpk2XUEmVV51Vg89hh8-"
+uri = "file://artifacts/mobile/assets/images/thumbnails/neuroanatomy.png"
+type = "image"
+title = "brain neuroanatomy thumbnail"
+
+[[generated]]
+id = "RbpO3-oHj-NS9V5yen-md"
+uri = "file://artifacts/mobile/assets/images/thumbnails/embryology.png"
+type = "image"
+title = "embryology stages thumbnail"
+
+[[generated]]
+id = "Jx-izxnayYWam4kohUVJT"
+uri = "file://artifacts/mobile/assets/images/thumbnails/osteology.png"
+type = "image"
+title = "osteology bones thumbnail"
+
 [[outputs]]
 id = "94NV8f3RBIIbXEYx6N3Bm"
 uri = "file://artifacts/mobile/assets/images/trophy.png"
