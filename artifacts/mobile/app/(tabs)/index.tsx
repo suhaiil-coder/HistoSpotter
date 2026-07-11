@@ -123,6 +123,16 @@ const SUBJECTS: Subject[] = [
     route: "/osteology",
     isNew: true,
   },
+  {
+    id: "surface-marking",
+    title: "Surface Marking",
+    subtitle: "Clinical anatomy · Surface landmarks",
+    color: "#14B8A6",
+    accent: "#2DD4BF",
+    questionCount: 14,
+    route: "/surface-marking",
+    isNew: true,
+  },
 ];
 
 const FEATURED = SUBJECTS[4];
