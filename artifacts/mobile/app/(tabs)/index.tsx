@@ -639,6 +639,8 @@ export default function HomeScreen() {
             router.push("/thorax-quiz");
           } else if (id === "abdomen") {
             router.push("/abdomen-quiz");
+          } else if (id === "ospe") {
+            router.push("/ospe-quiz");
           }
         }}
       />

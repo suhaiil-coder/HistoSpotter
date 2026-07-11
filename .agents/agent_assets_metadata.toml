@@ -96,6 +96,120 @@ uri = "file://artifacts/mobile/assets/images/thumbnails/osteology.png"
 type = "image"
 title = "osteology bones thumbnail"
 
+[[generated]]
+id = "V_V0m6xSAPceY64AcLuhj"
+uri = "file://artifacts/mobile/assets/images/ospe/p001_venipuncture.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "jLqRolPLuUGT2jQKP4vC9"
+uri = "file://artifacts/mobile/assets/images/ospe/p002_hernia.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "25ZQUnP0783-GEvrNscyT"
+uri = "file://artifacts/mobile/assets/images/ospe/p003_ape_hand.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Oe3dGqiqmvc6jBG7JZroB"
+uri = "file://artifacts/mobile/assets/images/ospe/p004_trendelenburg.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "-_wrNw5CDop8Vs-ZCaBPv"
+uri = "file://artifacts/mobile/assets/images/ospe/p005_varicose.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "PNfWIPYEhk5SETG1eOt_r"
+uri = "file://artifacts/mobile/assets/images/ospe/p006_lumbar_puncture.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "kFEj1qe_3dNaYV_JrCTd_"
+uri = "file://artifacts/mobile/assets/images/ospe/p007_raccoon_eyes.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "TP6fgbrP0sG_dk6Iz79y2"
+uri = "file://artifacts/mobile/assets/images/ospe/p008_birth_injuries.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "JD3htb3nB7bCbodvqHBPp"
+uri = "file://artifacts/mobile/assets/images/ospe/p009_claw_hand.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "MsO9kksKYOTUUJ4AUoIBY"
+uri = "file://artifacts/mobile/assets/images/ospe/p010_caput_medusae.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "n670Al_gkzo9pyIdv5ujA"
+uri = "file://artifacts/mobile/assets/images/ospe/p011_internal_squint.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "GdM06RRkgT9QJmdX4Ai5D"
+uri = "file://artifacts/mobile/assets/images/ospe/p012_foot_drop.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "0YDhUF6QiQoxsyK2Nh5ca"
+uri = "file://artifacts/mobile/assets/images/ospe/p013_amniocentesis.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "gSZGJR0Oailx4mCaPdrzF"
+uri = "file://artifacts/mobile/assets/images/ospe/p014_external_squint.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "-kwSl-iykWkGxB8xpKGKR"
+uri = "file://artifacts/mobile/assets/images/ospe/p015_gluteal_injection.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "C04go3UNCNyEKptieQMpS"
+uri = "file://artifacts/mobile/assets/images/ospe/p016_cdh.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "1urKZ1JIvUXHCs9Ku7Tx_"
+uri = "file://artifacts/mobile/assets/images/ospe/p017_urethra.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "kByBvCKwHU1pXNDHwQd-3"
+uri = "file://artifacts/mobile/assets/images/ospe/p018_wrist_drop.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "hAcOfBw7isflfItSvKnL7"
+uri = "file://artifacts/mobile/assets/images/ospe/p019_waldeyers_ring.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "94NV8f3RBIIbXEYx6N3Bm"
 uri = "file://artifacts/mobile/assets/images/trophy.png"
