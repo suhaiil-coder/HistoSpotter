@@ -7,7 +7,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { AppState } from "react-native";
+import { AppState, Platform } from "react-native";
 
 export interface UserProfile {
   id: string;
@@ -60,6 +60,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [persistUser]);
 
   useEffect(() => {
+    // Web preview dev bypass — skip onboarding so screens are visible in Replit
+    if (Platform.OS === "web" && __DEV__) {
+      setUser({ id: "dev", displayName: "Preview", totalMinutes: 0, joinedAt: new Date().toISOString() });
+      setIsLoading(false);
+      return;
+    }
     AsyncStorage.getItem(PROFILE_KEY)
       .then((raw) => {
         if (raw) {

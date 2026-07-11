@@ -58,6 +58,9 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
-    "expo-av": "15.0.2"
+    "@types/three": "^0.185.1",
+    "expo-av": "15.0.2",
+    "expo-gl": "^57.0.1",
+    "three": "^0.185.1"
   }
 }
