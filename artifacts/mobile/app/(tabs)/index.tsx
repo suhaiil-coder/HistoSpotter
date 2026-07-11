@@ -116,10 +116,12 @@ const SUBJECTS: Subject[] = [
   {
     id: "osteology",
     title: "Osteology",
-    subtitle: "Coming soon",
+    subtitle: "Bone Atlas · Labels & landmarks",
     color: "#6366F1",
     accent: "#818CF8",
-    questionCount: 0,
+    questionCount: 24,
+    route: "/osteology",
+    isNew: true,
   },
 ];
 
