@@ -118,6 +118,9 @@ export default function NameEntryScreen() {
                   onChangeText={(v) => { setNameValue(v); setError(""); }}
                   autoCapitalize="words"
                   autoCorrect={false}
+                  autoComplete="off"
+                  textContentType="none"
+                  importantForAutofill="no"
                   autoFocus
                   onFocus={() => setFocused(true)}
                   onBlur={() => setFocused(false)}
