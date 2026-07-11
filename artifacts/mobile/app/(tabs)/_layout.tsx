@@ -1,6 +1,6 @@
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { SymbolView } from "expo-symbols";
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
@@ -48,8 +48,11 @@ function ClassicTabLayout() {
         name="spotter"
         options={{
           title: "Spotter",
-          tabBarIcon: ({ color, size }) => (
-              <MaterialCommunityIcons name="microscope" size={size} color={color} />
+          tabBarIcon: ({ color, size }) =>
+            isIOS ? (
+              <SymbolView name="viewfinder" tintColor={color} size={size} />
+            ) : (
+              <Feather name="crosshair" size={size} color={color} />
             ),
         }}
       />
