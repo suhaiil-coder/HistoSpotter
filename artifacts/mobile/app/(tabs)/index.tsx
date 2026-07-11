@@ -201,6 +201,8 @@ export default function HomeScreen() {
             router.push("/upper-limb-quiz");
           } else if (id === "thorax") {
             router.push("/thorax-quiz");
+          } else if (id === "abdomen") {
+            router.push("/abdomen-quiz");
           }
         }}
       />
