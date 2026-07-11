@@ -1,12 +1,11 @@
 import { Feather } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
+  Animated,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -17,224 +16,157 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
 
-type Mode = "login" | "register";
-
-function InputField({
-  icon,
-  placeholder,
-  value,
-  onChangeText,
-  secureTextEntry,
-  autoCapitalize,
-}: {
-  icon: React.ComponentProps<typeof Feather>["name"];
-  placeholder: string;
-  value: string;
-  onChangeText: (v: string) => void;
-  secureTextEntry?: boolean;
-  autoCapitalize?: "none" | "words" | "sentences";
-}) {
-  const colors = useColors();
-  const [focused, setFocused] = useState(false);
-  const [showPw, setShowPw] = useState(false);
-  const isPassword = secureTextEntry;
-
-  return (
-    <View
-      style={[
-        styles.inputWrap,
-        {
-          backgroundColor: colors.input,
-          borderColor: focused ? colors.primary : colors.border,
-        },
-      ]}
-    >
-      <Feather name={icon} size={18} color={focused ? colors.primary : colors.mutedForeground} style={styles.inputIcon} />
-      <TextInput
-        style={[styles.input, { color: colors.foreground }]}
-        placeholder={placeholder}
-        placeholderTextColor={colors.mutedForeground + "88"}
-        value={value}
-        onChangeText={onChangeText}
-        secureTextEntry={isPassword && !showPw}
-        autoCapitalize={autoCapitalize ?? "none"}
-        autoCorrect={false}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-      />
-      {isPassword && (
-        <Pressable onPress={() => setShowPw((v) => !v)} style={styles.eyeBtn}>
-          <Feather name={showPw ? "eye-off" : "eye"} size={16} color={colors.mutedForeground} />
-        </Pressable>
-      )}
-    </View>
-  );
-}
-
-export default function LoginScreen() {
+export default function NameEntryScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { login, register } = useAuth();
+  const { setName } = useAuth();
   const colors = useColors();
 
-  const [mode, setMode] = useState<Mode>("login");
-  const [displayName, setDisplayName] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [name, setNameValue] = useState("");
+  const [focused, setFocused] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const switchMode = (next: Mode) => {
-    if (next === mode) return;
-    setMode(next);
-    setError("");
-    setDisplayName("");
-    setUsername("");
-    setPassword("");
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const shake = () => {
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 6, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+    ]).start();
   };
 
-  const handleSubmit = async () => {
+  const handleStart = async () => {
     if (loading) return;
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setError("Please enter your name to continue.");
+      shake();
+      return;
+    }
+    if (trimmed.length < 2) {
+      setError("Name must be at least 2 characters.");
+      shake();
+      return;
+    }
     setError("");
     setLoading(true);
-    try {
-      const result =
-        mode === "login"
-          ? await login(username.trim(), password)
-          : await register(displayName.trim(), username.trim(), password);
-      if (!result.success) {
-        setError(result.error ?? "Something went wrong.");
-      } else {
-        router.replace("/(tabs)");
-      }
-    } finally {
-      setLoading(false);
-    }
+    await setName(trimmed);
+    router.replace("/(tabs)");
+    setLoading(false);
   };
+
+  const ready = name.trim().length >= 2;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <LinearGradient
-        colors={[colors.primary + "22", colors.background, colors.background]}
-        style={StyleSheet.absoluteFill}
-      />
-      <View style={[styles.glowTop, { top: insets.top + 40, backgroundColor: colors.primary }]} />
+      <View style={[styles.glowTop, { backgroundColor: colors.primary }]} />
       <View style={[styles.glowBottom, { backgroundColor: colors.accent }]} />
 
       <KeyboardAvoidingView
         style={styles.kav}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={0}
       >
-        <ScrollView
-          contentContainerStyle={[
-            styles.scroll,
-            { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 32 },
+        <View
+          style={[
+            styles.content,
+            { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 32 },
           ]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
         >
           <View style={styles.hero}>
-            <View style={[styles.logoMark, { backgroundColor: colors.primary, shadowColor: colors.primary }]}>
-              <Text style={styles.logoLetter}>M</Text>
+            <View style={[styles.badge, { backgroundColor: colors.primary, shadowColor: colors.primary }]}>
+              <Text style={styles.badgeLetter}>M</Text>
             </View>
             <Text style={styles.appName}>
-              <Text style={[styles.appNameLight, { color: colors.foreground }]}>Med</Text>
-              <Text style={{ color: colors.primary, fontFamily: "Inter_700Bold", fontSize: 34 }}>Spotter</Text>
+              <Text style={{ color: colors.foreground, fontFamily: "Inter_700Bold", fontSize: 36 }}>Med</Text>
+              <Text style={{ color: colors.primary, fontFamily: "Inter_700Bold", fontSize: 36 }}>Spotter</Text>
             </Text>
-            <Text style={[styles.appTagline, { color: colors.mutedForeground }]}>Master Histology</Text>
+            <Text style={[styles.tagline, { color: colors.mutedForeground }]}>Master Histology</Text>
           </View>
 
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.modeToggle, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              {(["login", "register"] as Mode[]).map((m) => (
-                <Pressable
-                  key={m}
-                  style={[
-                    styles.modeBtn,
-                    mode === m && { backgroundColor: colors.primary },
-                  ]}
-                  onPress={() => switchMode(m)}
-                >
-                  <Text
-                    style={[
-                      styles.modeBtnText,
-                      { color: mode === m ? "#FFFFFF" : colors.mutedForeground },
-                    ]}
-                  >
-                    {m === "login" ? "Sign In" : "Sign Up"}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
+          <View style={styles.formArea}>
+            <Text style={[styles.question, { color: colors.foreground }]}>
+              What's your name?
+            </Text>
+            <Text style={[styles.hint, { color: colors.mutedForeground }]}>
+              This is how you'll appear on the leaderboard.
+            </Text>
 
-            <View style={styles.fields}>
-              {mode === "register" && (
-                <InputField
-                  icon="user"
-                  placeholder="Display name"
-                  value={displayName}
-                  onChangeText={setDisplayName}
-                  autoCapitalize="words"
+            <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
+              <View
+                style={[
+                  styles.inputWrap,
+                  {
+                    backgroundColor: colors.input,
+                    borderColor: focused ? colors.primary : error ? colors.destructive : colors.border,
+                  },
+                ]}
+              >
+                <Feather
+                  name="user"
+                  size={20}
+                  color={focused ? colors.primary : colors.mutedForeground}
+                  style={styles.inputIcon}
                 />
-              )}
-              <InputField
-                icon="at-sign"
-                placeholder="Username"
-                value={username}
-                onChangeText={setUsername}
-              />
-              <InputField
-                icon="lock"
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
-            </View>
+                <TextInput
+                  style={[styles.input, { color: colors.foreground }]}
+                  placeholder="Your display name"
+                  placeholderTextColor={colors.mutedForeground + "80"}
+                  value={name}
+                  onChangeText={(v) => { setNameValue(v); setError(""); }}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  autoFocus
+                  onFocus={() => setFocused(true)}
+                  onBlur={() => setFocused(false)}
+                  onSubmitEditing={handleStart}
+                  returnKeyType="go"
+                  maxLength={32}
+                />
+                {name.length > 0 && (
+                  <Pressable onPress={() => { setNameValue(""); setError(""); }}>
+                    <Feather name="x" size={18} color={colors.mutedForeground} />
+                  </Pressable>
+                )}
+              </View>
+            </Animated.View>
 
             {error ? (
-              <View style={[styles.errorBox, { backgroundColor: colors.destructive + "18", borderColor: colors.destructive + "50" }]}>
-                <Feather name="alert-circle" size={14} color={colors.destructive} />
+              <View style={styles.errorRow}>
+                <Feather name="alert-circle" size={13} color={colors.destructive} />
                 <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>
               </View>
             ) : null}
 
             <Pressable
-              style={({ pressed }) => [
-                styles.submitBtn,
-                { backgroundColor: colors.primary, shadowColor: colors.primary, opacity: pressed || loading ? 0.8 : 1 },
-              ]}
-              onPress={handleSubmit}
+              onPress={handleStart}
               disabled={loading}
+              style={({ pressed }) => [
+                styles.btn,
+                {
+                  backgroundColor: ready ? colors.primary : colors.secondary,
+                  shadowColor: colors.primary,
+                  opacity: pressed || loading ? 0.8 : 1,
+                },
+              ]}
             >
-              <Text style={styles.submitText}>
-                {loading ? "Please wait…" : mode === "login" ? "Sign In" : "Create Account"}
+              <Text style={[styles.btnText, { color: ready ? "#FFFFFF" : colors.mutedForeground }]}>
+                {loading ? "Starting…" : "Let's Go"}
               </Text>
-              {!loading && <Feather name="arrow-right" size={18} color="#FFFFFF" />}
+              <Feather
+                name="arrow-right"
+                size={18}
+                color={ready ? "#FFFFFF" : colors.mutedForeground}
+              />
             </Pressable>
-
-            {mode === "login" ? (
-              <Pressable onPress={() => switchMode("register")} style={styles.switchLink}>
-                <Text style={[styles.switchLinkText, { color: colors.mutedForeground }]}>
-                  New here?{" "}
-                  <Text style={[styles.switchLinkAccent, { color: colors.accent }]}>Create an account</Text>
-                </Text>
-              </Pressable>
-            ) : (
-              <Pressable onPress={() => switchMode("login")} style={styles.switchLink}>
-                <Text style={[styles.switchLinkText, { color: colors.mutedForeground }]}>
-                  Already have an account?{" "}
-                  <Text style={[styles.switchLinkAccent, { color: colors.accent }]}>Sign in</Text>
-                </Text>
-              </Pressable>
-            )}
           </View>
 
           <Text style={[styles.footer, { color: colors.mutedForeground + "60" }]}>
-            Your progress is saved locally on this device.
+            No account needed — your progress is saved on this device.
           </Text>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </View>
   );
@@ -243,117 +175,91 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   kav: { flex: 1 },
-  scroll: { flexGrow: 1, paddingHorizontal: 24 },
+  content: { flex: 1, paddingHorizontal: 28 },
 
   glowTop: {
     position: "absolute",
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    opacity: 0.1,
+    top: -60,
     alignSelf: "center",
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    opacity: 0.09,
   },
   glowBottom: {
     position: "absolute",
-    bottom: -80,
+    bottom: -100,
     right: -80,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
     opacity: 0.06,
   },
 
-  hero: { alignItems: "center", marginBottom: 36 },
-  logoMark: {
-    width: 76,
-    height: 76,
-    borderRadius: 22,
+  hero: { alignItems: "center", gap: 10, marginBottom: 52 },
+  badge: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: 4,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.45,
     shadowRadius: 20,
     elevation: 14,
   },
-  logoLetter: { color: "#FFFFFF", fontSize: 38, fontFamily: "Inter_700Bold", letterSpacing: -1 },
-  appName: { fontSize: 34, letterSpacing: -0.5 },
-  appNameLight: { fontFamily: "Inter_700Bold" },
-  appTagline: {
+  badgeLetter: { color: "#FFFFFF", fontSize: 40, fontFamily: "Inter_700Bold", letterSpacing: -1 },
+  appName: { letterSpacing: -0.5 },
+  tagline: {
     fontFamily: "Inter_400Regular",
-    fontSize: 13,
+    fontSize: 12,
     letterSpacing: 2.5,
     textTransform: "uppercase",
-    marginTop: 6,
   },
 
-  card: {
-    borderRadius: 24,
-    borderWidth: 1,
-    padding: 24,
-    gap: 16,
-  },
-
-  modeToggle: {
-    flexDirection: "row",
-    borderRadius: 12,
-    padding: 4,
-    borderWidth: 1,
-  },
-  modeBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-    borderRadius: 9,
-  },
-  modeBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14 },
-
-  fields: { gap: 12 },
+  formArea: { gap: 16 },
+  question: { fontFamily: "Inter_700Bold", fontSize: 26, letterSpacing: -0.5 },
+  hint: { fontFamily: "Inter_400Regular", fontSize: 14, marginTop: -6 },
 
   inputWrap: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 1.5,
-    paddingHorizontal: 14,
-    height: 52,
+    borderRadius: 16,
+    borderWidth: 2,
+    paddingHorizontal: 16,
+    height: 58,
   },
-  inputIcon: { marginRight: 10 },
-  input: { flex: 1, fontFamily: "Inter_400Regular", fontSize: 15 },
-  eyeBtn: { padding: 4 },
-
-  errorBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
+  inputIcon: { marginRight: 12 },
+  input: {
+    flex: 1,
+    fontFamily: "Inter_500Medium",
+    fontSize: 17,
   },
-  errorText: { fontFamily: "Inter_400Regular", fontSize: 13, flex: 1 },
 
-  submitBtn: {
-    borderRadius: 14,
-    paddingVertical: 16,
+  errorRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: -6 },
+  errorText: { fontFamily: "Inter_400Regular", fontSize: 13 },
+
+  btn: {
+    height: 58,
+    borderRadius: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+    marginTop: 4,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.35,
     shadowRadius: 12,
     elevation: 8,
   },
-  submitText: { color: "#FFFFFF", fontFamily: "Inter_600SemiBold", fontSize: 16 },
-
-  switchLink: { alignItems: "center", paddingVertical: 4 },
-  switchLinkText: { fontFamily: "Inter_400Regular", fontSize: 13 },
-  switchLinkAccent: { fontFamily: "Inter_600SemiBold" },
+  btnText: { fontFamily: "Inter_700Bold", fontSize: 17 },
 
   footer: {
     textAlign: "center",
     fontFamily: "Inter_400Regular",
     fontSize: 12,
-    marginTop: 24,
+    marginTop: "auto",
+    paddingTop: 24,
   },
 });

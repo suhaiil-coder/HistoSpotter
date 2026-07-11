@@ -92,12 +92,12 @@ export default function LeaderboardScreen() {
 
         {sorted.map((u, idx) => {
           const rank = idx + 1;
-          const isMe = user?.username === u.username;
-          const color = avatarColor(u.username);
+          const isMe = user?.id === u.id;
+          const color = avatarColor(u.id);
 
           return (
             <View
-              key={u.username}
+              key={u.id}
               style={[
                 styles.row,
                 {
@@ -127,7 +127,7 @@ export default function LeaderboardScreen() {
                   )}
                 </View>
                 <Text style={[styles.username, { color: colors.mutedForeground }]}>
-                  @{u.username}
+                  {u.joinedAt ? `Joined ${new Date(u.joinedAt).toLocaleDateString()}` : ""}
                 </Text>
               </View>
 

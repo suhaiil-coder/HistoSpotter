@@ -126,7 +126,7 @@ export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { settings, updateSettings, resetStats, stats } = useApp();
-  const { user, logout } = useAuth();
+  const { user, clearName } = useAuth();
   const router = useRouter();
   const [confirmReset, setConfirmReset] = useState(false);
   const topInset = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
@@ -164,8 +164,8 @@ export default function SettingsScreen() {
     );
   };
 
-  const handleLogout = async () => {
-    await logout();
+  const handleChangeName = async () => {
+    await clearName();
     router.replace("/login");
   };
 
@@ -199,7 +199,7 @@ export default function SettingsScreen() {
                   {user.displayName}
                 </Text>
                 <Text style={[styles.profileUsername, { color: colors.mutedForeground }]}>
-                  @{user.username}
+                  Tap below to change name
                 </Text>
               </View>
             </View>
@@ -338,14 +338,14 @@ export default function SettingsScreen() {
         </View>
 
         <Pressable
-          onPress={handleLogout}
+          onPress={handleChangeName}
           style={({ pressed }) => [
             styles.logoutBtn,
             { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.7 : 1 },
           ]}
         >
-          <Feather name="log-out" size={18} color={colors.mutedForeground} />
-          <Text style={[styles.logoutText, { color: colors.mutedForeground }]}>Sign Out</Text>
+          <Feather name="edit-2" size={18} color={colors.mutedForeground} />
+          <Text style={[styles.logoutText, { color: colors.mutedForeground }]}>Change Name</Text>
         </Pressable>
       </ScrollView>
     </View>
