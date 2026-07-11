@@ -1,54 +1,73 @@
 /**
- * SkeletonViewer — Medical-illustration-style interactive skeleton.
- * Drawn in react-native-svg (Expo Go + web compatible).
- * Each bone individually tappable; selected bone highlights orange.
- * Drag left/right rotates skeleton (Animated perspective skew).
+ * SkeletonViewer — BioDigital-style interactive skeleton.
+ * react-native-svg anatomical illustration; radial gradients give 3D bone depth.
+ * Tap to select (blue highlight), drag left/right to rotate.
  */
 import React, { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { Animated, PanResponder, StyleSheet, View } from "react-native";
-import Svg, { Defs, G, LinearGradient, Stop, Path, Ellipse, Rect, Circle } from "react-native-svg";
+import Svg, {
+  Circle, Defs, Ellipse, G, LinearGradient,
+  Path, RadialGradient, Rect, Stop,
+} from "react-native-svg";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
-export interface BoneInfo { name: string; latinName: string; region: string; boneId: string; }
-export interface SkeletonViewerRef { resetView: () => void; setMode: (m: string) => void; }
+export interface BoneInfo {
+  name: string; latinName: string; region: string; boneId: string;
+}
+export interface SkeletonViewerRef {
+  resetView: () => void; setMode: (m: string) => void;
+}
 
 // ─── Colours ──────────────────────────────────────────────────────────────────
-const CAVITY = "#1a1530";
-const STROKE = "#b89840";
-const SEL_S  = "#cc6600";
-const SW     = 0.8;
+const CAVITY    = "#0a0a0a";
+const STROKE    = "rgba(90,75,55,0.45)";
+const SEL_S     = "#63B3ED";
+const SW        = 0.5;
 
 // ─── Gradient defs ────────────────────────────────────────────────────────────
 function BoneGrads() {
   return (
     <Defs>
-      <LinearGradient id="bg" x1="0" y1="0" x2="1" y2="0">
-        <Stop offset="0"   stopColor="#f8edcc" />
-        <Stop offset="0.4" stopColor="#edd9a3" />
-        <Stop offset="1"   stopColor="#c9a870" />
-      </LinearGradient>
-      <LinearGradient id="sel" x1="0" y1="0" x2="1" y2="0">
-        <Stop offset="0"   stopColor="#ffb040" />
-        <Stop offset="0.5" stopColor="#ff8800" />
-        <Stop offset="1"   stopColor="#cc5500" />
-      </LinearGradient>
-      <LinearGradient id="cart" x1="0" y1="0" x2="1" y2="0">
-        <Stop offset="0" stopColor="#a0e0e0" />
-        <Stop offset="1" stopColor="#5cb8b8" />
+      {/* Realistic bone: directional light from upper-left → radial gradient depth */}
+      <RadialGradient id="bg" cx="30%" cy="20%" r="78%" gradientUnits="objectBoundingBox">
+        <Stop offset="0%"   stopColor="#F7F3EC" />
+        <Stop offset="45%"  stopColor="#DDD5C0" />
+        <Stop offset="100%" stopColor="#A89070" />
+      </RadialGradient>
+      {/* Selected bone — BioDigital-style blue */}
+      <RadialGradient id="sel" cx="35%" cy="25%" r="70%" gradientUnits="objectBoundingBox">
+        <Stop offset="0%"   stopColor="#BEE3F8" />
+        <Stop offset="55%"  stopColor="#4299E1" />
+        <Stop offset="100%" stopColor="#2B6CB0" />
+      </RadialGradient>
+      {/* Cartilage / joint surfaces */}
+      <RadialGradient id="cart" cx="40%" cy="30%" r="65%" gradientUnits="objectBoundingBox">
+        <Stop offset="0%"   stopColor="#B2F5EA" />
+        <Stop offset="100%" stopColor="#276749" />
+      </RadialGradient>
+      {/* Selected-cartilage */}
+      <LinearGradient id="cartSel" x1="0" y1="0" x2="1" y2="1">
+        <Stop offset="0%"   stopColor="#76E4F7" />
+        <Stop offset="100%" stopColor="#0987A0" />
       </LinearGradient>
     </Defs>
   );
 }
 
 // ─── Bone wrapper ─────────────────────────────────────────────────────────────
-interface BoneProps { id: string; info: BoneInfo; sel: string | null; onPress: () => void; children: React.ReactNode; }
+interface BoneProps {
+  id: string; info: BoneInfo; sel: string | null;
+  onPress: () => void; children: React.ReactNode;
+}
 function Bone({ id, info, sel, onPress, children }: BoneProps) {
   const selected = sel === id;
   return (
-    <G fill={selected ? "url(#sel)" : "url(#bg)"}
-       stroke={selected ? SEL_S : STROKE}
-       strokeWidth={selected ? SW * 1.5 : SW}
-       onPress={onPress}>
+    <G
+      fill={selected ? "url(#sel)" : "url(#bg)"}
+      stroke={selected ? SEL_S : STROKE}
+      strokeWidth={selected ? SW * 1.6 : SW}
+      onPress={onPress}
+    >
       {children}
     </G>
   );
@@ -61,15 +80,19 @@ const SkeletonViewer = forwardRef<SkeletonViewerRef, { onBoneSelect: (b: BoneInf
     const rotX = useRef(new Animated.Value(0)).current;
 
     useImperativeHandle(ref, () => ({
-      resetView: () => { setSel(null); onBoneSelect(null); Animated.spring(rotX, { toValue: 0, useNativeDriver: true }).start(); },
+      resetView: () => {
+        setSel(null); onBoneSelect(null);
+        Animated.spring(rotX, { toValue: 0, useNativeDriver: true }).start();
+      },
       setMode: () => {},
     }));
 
     const pan = useRef(PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 3,
-      onPanResponderMove: (_, g) => rotX.setValue(g.dx * 0.45),
-      onPanResponderRelease: () => Animated.spring(rotX, { toValue: 0, useNativeDriver: true, friction: 6 }).start(),
+      onPanResponderMove: (_, g) => rotX.setValue(g.dx * 0.4),
+      onPanResponderRelease: () =>
+        Animated.spring(rotX, { toValue: 0, useNativeDriver: true, friction: 6 }).start(),
     })).current;
 
     function pick(id: string, info: BoneInfo) {
@@ -77,7 +100,6 @@ const SkeletonViewer = forwardRef<SkeletonViewerRef, { onBoneSelect: (b: BoneInf
       else { setSel(id); onBoneSelect(info); }
     }
 
-    // Shorthand for a tappable bone group
     function B(id: string, info: BoneInfo, children: React.ReactNode) {
       return (
         <Bone key={id} id={id} info={info} sel={sel} onPress={() => pick(id, info)}>
@@ -86,16 +108,23 @@ const SkeletonViewer = forwardRef<SkeletonViewerRef, { onBoneSelect: (b: BoneInf
       );
     }
 
-    const rotDeg = rotX.interpolate({ inputRange: [-200, 200], outputRange: ["-28deg", "28deg"] });
+    const rotDeg = rotX.interpolate({
+      inputRange: [-200, 200], outputRange: ["-28deg", "28deg"],
+    });
 
     return (
       <View style={styles.root} {...pan.panHandlers}>
-        <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ perspective: 900 }, { rotateY: rotDeg }] }]}>
-          {/* viewBox compresses 730-unit skeleton into 438 units so full body fits the screen */}
-          <Svg viewBox="0 0 200 438" style={StyleSheet.absoluteFill} preserveAspectRatio="xMidYMid meet">
+        <Animated.View
+          style={[StyleSheet.absoluteFill, { transform: [{ perspective: 900 }, { rotateY: rotDeg }] }]}
+        >
+          {/* viewBox 200×438 with scale(1,0.6) fits the 730-unit skeleton on any screen */}
+          <Svg
+            viewBox="0 0 200 438"
+            style={StyleSheet.absoluteFill}
+            preserveAspectRatio="xMidYMid meet"
+          >
             <BoneGrads />
-            {/* scale(1, 0.6) maps all y-coords (0–730) into 0–438 */}
-            <G transform="scale(1, 0.6)">{/* inner */}
+            <G transform="scale(1, 0.6)">
 
             {/* ── SKULL ─────────────────────────────────────────────────────── */}
             {B("skull", { name: "Skull", latinName: "Calvaria", region: "skull", boneId: "skull" },
@@ -106,10 +135,10 @@ const SkeletonViewer = forwardRef<SkeletonViewerRef, { onBoneSelect: (b: BoneInf
                 <Path d="M55,75 C49,72 43,73 40,77 C38,82 42,87 50,87 C54,87 58,84 60,80 Z" />
                 <Path d="M145,75 C151,72 157,73 160,77 C162,82 158,87 150,87 C146,87 142,84 140,80 Z" />
                 {/* Eye sockets */}
-                <Ellipse cx={83} cy={66} rx={15} ry={12} fill={CAVITY} stroke="#6c4c10" />
-                <Ellipse cx={117} cy={66} rx={15} ry={12} fill={CAVITY} stroke="#6c4c10" />
+                <Ellipse cx={83} cy={66} rx={15} ry={12} fill={CAVITY} stroke="rgba(0,0,0,0.8)" strokeWidth={0.4} />
+                <Ellipse cx={117} cy={66} rx={15} ry={12} fill={CAVITY} stroke="rgba(0,0,0,0.8)" strokeWidth={0.4} />
                 {/* Nasal aperture */}
-                <Path d="M95,79 C93,87 94,94 100,96 C106,94 107,87 105,79 L101,75 L100,73 L99,75 Z" fill={CAVITY} stroke="#6c4c10" />
+                <Path d="M95,79 C93,87 94,94 100,96 C106,94 107,87 105,79 L101,75 L100,73 L99,75 Z" fill={CAVITY} stroke="rgba(0,0,0,0.8)" strokeWidth={0.4} />
                 {/* Maxilla */}
                 <Path d="M68,102 C80,110 90,113 100,113 C110,113 120,110 132,102 Z" />
                 {/* Mandible */}
@@ -121,7 +150,8 @@ const SkeletonViewer = forwardRef<SkeletonViewerRef, { onBoneSelect: (b: BoneInf
             {[...Array(7)].map((_, i) => {
               const id = `cv${i}`;
               const y = 162 + i * 9.5;
-              return B(id, { name: `C${i+1} Vertebra`, latinName: `Vertebra cervicalis ${i+1}`, region: "vertebral-column", boneId: "atlas" },
+              return B(id,
+                { name: `C${i+1} Vertebra`, latinName: `Vertebra cervicalis ${i+1}`, region: "vertebral-column", boneId: "atlas" },
                 <>
                   <Rect x={87} y={y} width={26} height={7} rx={2} />
                   <Path d={`M82,${y+3.5} L78,${y+3.5}`} strokeWidth={0.6} />
@@ -134,7 +164,8 @@ const SkeletonViewer = forwardRef<SkeletonViewerRef, { onBoneSelect: (b: BoneInf
             {[...Array(12)].map((_, i) => {
               const id = `tv${i}`;
               const y = 228 + i * 11;
-              return B(id, { name: `T${i+1} Vertebra`, latinName: `Vertebra thoracica ${i+1}`, region: "vertebral-column", boneId: "typical-thoracic" },
+              return B(id,
+                { name: `T${i+1} Vertebra`, latinName: `Vertebra thoracica ${i+1}`, region: "vertebral-column", boneId: "typical-thoracic" },
                 <>
                   <Rect x={86} y={y} width={28} height={8.5} rx={2} />
                   <Path d={`M100,${y+9} L100,${y+14}`} strokeWidth={0.6} />
@@ -146,7 +177,8 @@ const SkeletonViewer = forwardRef<SkeletonViewerRef, { onBoneSelect: (b: BoneInf
             {[...Array(5)].map((_, i) => {
               const id = `lv${i}`;
               const y = 362 + i * 13;
-              return B(id, { name: `L${i+1} Vertebra`, latinName: `Vertebra lumbalis ${i+1}`, region: "vertebral-column", boneId: "typical-lumbar" },
+              return B(id,
+                { name: `L${i+1} Vertebra`, latinName: `Vertebra lumbalis ${i+1}`, region: "vertebral-column", boneId: "typical-lumbar" },
                 <>
                   <Rect x={84} y={y} width={32} height={10} rx={2.5} />
                   <Path d={`M100,${y+11} L100,${y+16}`} strokeWidth={0.7} />
@@ -154,7 +186,7 @@ const SkeletonViewer = forwardRef<SkeletonViewerRef, { onBoneSelect: (b: BoneInf
               );
             })}
 
-            {/* ── SACRUM ───────────────────────────────────────────────────── */}
+            {/* ── SACRUM + COCCYX ───────────────────────────────────────────── */}
             {B("sacrum", { name: "Sacrum", latinName: "Os sacrum", region: "vertebral-column", boneId: "sacrum" },
               <Path d="M82,427 C81,434 85,454 91,469 C94,476 100,480 100,480 C100,480 106,476 109,469 C115,454 119,434 118,427 Z" />
             )}
@@ -171,11 +203,13 @@ const SkeletonViewer = forwardRef<SkeletonViewerRef, { onBoneSelect: (b: BoneInf
               const name = `Costa ${i+1}`;
               return (
                 <G key={`ribpair${i}`}>
-                  {B(`ribL${i}`, { name: i===0?"First Rib":"Rib", latinName: name, region:"thorax", boneId: i===0?"first-rib":"typical-rib" },
+                  {B(`ribL${i}`,
+                    { name: i===0?"First Rib":"Rib", latinName: name, region:"thorax", boneId: i===0?"first-rib":"typical-rib" },
                     <Path d={`M91,${r.y} C78,${r.y} ${100-r.w},${r.y+r.d*0.5} ${102-r.w},${r.y+r.d} C${108-r.w},${r.y+r.d+2} 87,${r.y+r.d*0.8} 91,${r.y+3}`}
                       fill="none" strokeWidth={1.8} strokeLinecap="round" />
                   )}
-                  {B(`ribR${i}`, { name: i===0?"First Rib":"Rib", latinName: name, region:"thorax", boneId: i===0?"first-rib":"typical-rib" },
+                  {B(`ribR${i}`,
+                    { name: i===0?"First Rib":"Rib", latinName: name, region:"thorax", boneId: i===0?"first-rib":"typical-rib" },
                     <Path d={`M109,${r.y} C122,${r.y} ${100+r.w},${r.y+r.d*0.5} ${98+r.w},${r.y+r.d} C${92+r.w},${r.y+r.d+2} 113,${r.y+r.d*0.8} 109,${r.y+3}`}
                       fill="none" strokeWidth={1.8} strokeLinecap="round" />
                   )}
@@ -200,7 +234,7 @@ const SkeletonViewer = forwardRef<SkeletonViewerRef, { onBoneSelect: (b: BoneInf
               <Path d="M107,222 C118,219 132,221 144,226 C153,230 160,228 164,224" fill="none" strokeWidth={4} strokeLinecap="round" />
             )}
 
-            {/* ── SCAPULAE (outline only — behind ribs) ──────────────────────── */}
+            {/* ── SCAPULAE ──────────────────────────────────────────────────── */}
             {B("scapL", { name: "Scapula", latinName: "Scapula", region: "upper-limb", boneId: "scapula" },
               <Path d="M30,228 C26,240 22,285 28,314 C40,317 55,294 60,262 C65,236 60,222 50,220 Z" fill="none" strokeWidth={1.2} />
             )}
@@ -261,7 +295,6 @@ const SkeletonViewer = forwardRef<SkeletonViewerRef, { onBoneSelect: (b: BoneInf
             {/* ── PELVIS ────────────────────────────────────────────────────── */}
             {B("pelvis", { name: "Pelvis", latinName: "Pelvis", region: "lower-limb", boneId: "hip-bone" },
               <>
-                {/* Iliac wings + ischium/pubis */}
                 <Path d="
                   M100,430 C100,430 90,426 77,424 C60,422 43,424 32,435 C21,446 22,462 32,470
                   C42,478 58,479 70,474 C80,470 88,462 92,454
@@ -269,28 +302,21 @@ const SkeletonViewer = forwardRef<SkeletonViewerRef, { onBoneSelect: (b: BoneInf
                   C142,479 158,478 168,470 C178,462 179,446 168,435
                   C157,424 140,422 123,424 C110,426 100,430 100,430 Z
                 " />
-                {/* Pubic symphysis */}
                 <Path d="M86,466 C88,472 93,477 100,479 C107,477 112,472 114,466 L110,462 L100,464 L90,462 Z" />
-                {/* Acetabula (hip sockets — cartilage) */}
-                <Circle cx={66} cy={472} r={11} fill="url(#cart)" stroke="#5cb8b8" strokeWidth={0.8} />
-                <Circle cx={134} cy={472} r={11} fill="url(#cart)" stroke="#5cb8b8" strokeWidth={0.8} />
+                {/* Acetabula (hip sockets) */}
+                <Circle cx={66} cy={472} r={11} fill="url(#cart)" stroke="rgba(45,198,183,0.6)" strokeWidth={0.8} />
+                <Circle cx={134} cy={472} r={11} fill="url(#cart)" stroke="rgba(45,198,183,0.6)" strokeWidth={0.8} />
               </>
             )}
 
-            {/* ── LEFT FEMUR (head + neck + shaft + condyles) ───────────────── */}
+            {/* ── LEFT FEMUR ────────────────────────────────────────────────── */}
             {B("femL", { name: "Femur", latinName: "Femur", region: "lower-limb", boneId: "femur" },
               <>
-                {/* Femoral head (projects medially toward acetabulum) */}
                 <Circle cx={64} cy={480} r={11} />
-                {/* Femoral neck */}
                 <Path d="M62,478 C66,483 70,487 74,488 L74,500 L68,500 Z" />
-                {/* Greater trochanter */}
                 <Path d="M74,476 C70,472 66,470 63,472 C60,474 60,480 64,484 C67,487 72,488 75,487 Z" />
-                {/* Shaft */}
                 <Path d="M68,492 L64,588 L62,594 C60,602 62,610 67,614 C72,618 79,617 83,611 C87,605 87,597 84,590 L82,584 L84,492 Z" />
-                {/* Medial condyle (larger) */}
                 <Ellipse cx={65} cy={600} rx={11} ry={9} />
-                {/* Lateral condyle */}
                 <Ellipse cx={83} cy={598} rx={9} ry={8} />
               </>
             )}
@@ -315,12 +341,10 @@ const SkeletonViewer = forwardRef<SkeletonViewerRef, { onBoneSelect: (b: BoneInf
               <Ellipse cx={130} cy={612} rx={11} ry={9} />
             )}
 
-            {/* ── LEFT TIBIA ────────────────────────────────────────────────── */}
+            {/* ── TIBIAE ────────────────────────────────────────────────────── */}
             {B("tibL", { name: "Tibia", latinName: "Tibia", region: "lower-limb", boneId: "tibia" },
               <>
-                {/* Tibial plateau (wide) */}
                 <Path d="M52,622 C53,616 58,612 76,613 C78,619 78,625 76,626 L52,626 Z" />
-                {/* Shaft */}
                 <Path d="M52,626 L50,706 C50,714 54,720 61,721 C68,722 74,716 74,708 L76,626 Z" />
               </>
             )}
@@ -357,7 +381,7 @@ const SkeletonViewer = forwardRef<SkeletonViewerRef, { onBoneSelect: (b: BoneInf
               </>
             )}
 
-            </G>{/* end scale */}
+            </G>
           </Svg>
         </Animated.View>
       </View>
@@ -367,4 +391,4 @@ const SkeletonViewer = forwardRef<SkeletonViewerRef, { onBoneSelect: (b: BoneInf
 
 export default SkeletonViewer;
 
-const styles = StyleSheet.create({ root: { flex: 1, backgroundColor: "#1e1e2e" } });
+const styles = StyleSheet.create({ root: { flex: 1, backgroundColor: "#000000" } });

@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 import {
+  Animated,
   Dimensions,
   ScrollView,
   StatusBar,
@@ -8,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import SkeletonViewer, {
   type BoneInfo,
@@ -18,71 +19,64 @@ import { BONES } from "../constants/osteologyData";
 
 const { width: SW } = Dimensions.get("window");
 
-// ─── Bottom tab thumbnails ────────────────────────────────────────────────────
-type TabKey = "overview" | "bonymarkings" | "quiz1" | "quiz2";
-
-const TABS: { key: TabKey; label: string; icon: any; color: string }[] = [
-  { key: "overview",     label: "Overview",       icon: "eye-outline",      color: "#e8d5a3" },
-  { key: "bonymarkings", label: "Bony markings",  icon: "location-outline", color: "#c8e0f0" },
-  { key: "quiz1",        label: "Quiz #1",         icon: "help-circle-outline", color: "#f0d0c0" },
-  { key: "quiz2",        label: "Quiz #2",         icon: "school-outline",   color: "#d0f0d0" },
+// ─── Body systems ────────────────────────────────────────────────────────────
+const SYSTEMS = [
+  { key: "skeletal",      label: "Skeletal",      icon: "body-outline"       as const },
+  { key: "muscular",      label: "Muscular",       icon: "fitness-outline"    as const },
+  { key: "cardiovascular",label: "Vascular",       icon: "heart-outline"      as const },
+  { key: "neural",        label: "Neural",         icon: "git-network-outline"as const },
+  { key: "lymphatic",     label: "Lymphatic",      icon: "water-outline"      as const },
 ];
 
-// Lookup full bone data for selected bone
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+type TabKey = "overview" | "bonymarkings" | "quiz1" | "quiz2";
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "overview",     label: "Overview" },
+  { key: "bonymarkings", label: "Markings" },
+  { key: "quiz1",        label: "Quiz" },
+];
+
 function getBoneData(info: BoneInfo) {
   return BONES.find(b => b.id === info.boneId) ?? null;
 }
 
-// ─── Tab card thumbnail ───────────────────────────────────────────────────────
-function TabCard({
-  tab, active, bone, onPress,
-}: { tab: typeof TABS[0]; active: boolean; bone: BoneInfo; onPress: () => void }) {
-  return (
-    <TouchableOpacity onPress={onPress} style={[styles.tabCard, active && styles.tabCardActive]}>
-      {/* Small bone silhouette area */}
-      <View style={[styles.tabThumb, { backgroundColor: tab.color + "22" }]}>
-        <Ionicons name={tab.icon} size={22} color={active ? "#ff8800" : tab.color} />
-      </View>
-      <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{tab.label}</Text>
-    </TouchableOpacity>
-  );
-}
-
-// ─── Tab content panels ───────────────────────────────────────────────────────
+// ─── Overview ─────────────────────────────────────────────────────────────────
 function OverviewPanel({ info }: { info: BoneInfo }) {
   const bone = getBoneData(info);
   return (
-    <View style={styles.panelContent}>
-      <Text style={styles.panelTitle}>{info.name}</Text>
-      <Text style={styles.panelSub}>{info.latinName}</Text>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.panelScroll}>
       {bone && (
         <>
-          <Text style={styles.panelBodyLabel}>Articulations</Text>
-          {bone.articulations.slice(0, 4).map((a, i) => (
-            <Text key={i} style={styles.panelBodyTxt}>• {a}</Text>
+          <Text style={styles.sectionLabel}>ARTICULATIONS</Text>
+          {bone.articulations.slice(0, 5).map((a, i) => (
+            <View key={i} style={styles.artRow}>
+              <View style={styles.artDot} />
+              <Text style={styles.artTxt}>{a}</Text>
+            </View>
           ))}
           {bone.clinical ? (
             <>
-              <Text style={[styles.panelBodyLabel, { color: "#fb923c" }]}>Clinical note</Text>
-              <Text style={styles.panelBodyTxt}>{bone.clinical}</Text>
+              <Text style={[styles.sectionLabel, { color: "#F6AD55", marginTop: 16 }]}>CLINICAL NOTE</Text>
+              <Text style={styles.clinicalTxt}>{bone.clinical}</Text>
             </>
           ) : null}
         </>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
+// ─── Bony markings ────────────────────────────────────────────────────────────
 function BonyMarkingsPanel({ info }: { info: BoneInfo }) {
   const bone = getBoneData(info);
   if (!bone) return null;
   return (
-    <ScrollView contentContainerStyle={styles.panelContent} showsVerticalScrollIndicator={false}>
-      <Text style={styles.panelTitle}>Bony Markings</Text>
-      <Text style={styles.panelSub}>{bone.features.length} landmarks</Text>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.panelScroll}>
       {bone.features.slice(0, 8).map((f, i) => (
         <View key={f.id} style={styles.markRow}>
-          <View style={styles.markNum}><Text style={styles.markNumTxt}>{i + 1}</Text></View>
+          <View style={styles.markIdx}>
+            <Text style={styles.markIdxTxt}>{i + 1}</Text>
+          </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.markName}>{f.name}</Text>
             <Text style={styles.markDesc} numberOfLines={2}>{f.desc}</Text>
@@ -93,186 +87,198 @@ function BonyMarkingsPanel({ info }: { info: BoneInfo }) {
   );
 }
 
-function QuizPanel({ info, num }: { info: BoneInfo; num: 1 | 2 }) {
+// ─── Quiz ─────────────────────────────────────────────────────────────────────
+function QuizPanel({ info }: { info: BoneInfo }) {
   const bone = getBoneData(info);
   const [answered, setAnswered] = useState<string | null>(null);
   if (!bone || bone.features.length < 4) return (
-    <View style={styles.panelContent}>
-      <Text style={styles.panelTitle}>Quiz #{num}</Text>
-      <Text style={styles.panelBodyTxt}>Not enough data for this bone.</Text>
+    <View style={styles.panelScroll}>
+      <Text style={styles.artTxt}>Not enough data for this bone.</Text>
     </View>
   );
-
-  const qi = num === 1 ? 0 : Math.floor(bone.features.length / 2);
-  const correct = bone.features[qi]!.name;
+  const correct = bone.features[0]!.name;
   const opts = React.useMemo(() => {
-    const wrong = bone.features.filter((_, i) => i !== qi).sort(() => Math.random() - 0.5).slice(0, 3).map(f => f.name);
+    const wrong = bone.features.slice(1).sort(() => Math.random() - 0.5).slice(0, 3).map(f => f.name);
     return [correct, ...wrong].sort(() => Math.random() - 0.5);
-  }, [bone.id, num]);
+  }, [bone.id]);
 
   return (
-    <View style={styles.panelContent}>
-      <Text style={styles.panelTitle}>Quiz #{num}</Text>
-      <Text style={styles.panelBodyLabel}>What structure is labeled #{qi + 1}?</Text>
-      {opts.map(opt => {
-        const isC = opt === correct, chosen = answered === opt, rev = !!answered;
-        return (
-          <TouchableOpacity
-            key={opt}
-            onPress={() => !answered && setAnswered(opt)}
-            style={[styles.quizOpt, rev && isC && styles.quizOptOk, rev && chosen && !isC && styles.quizOptBad]}
-          >
-            <Text style={[styles.quizOptTxt, rev && isC && { color: "#fff" }]}>{opt}</Text>
-            {rev && isC  && <Ionicons name="checkmark-circle" size={16} color="#4ade80" />}
-            {rev && chosen && !isC && <Ionicons name="close-circle" size={16} color="#f87171" />}
-          </TouchableOpacity>
-        );
-      })}
-    </View>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.panelScroll}>
+      <Text style={styles.sectionLabel}>IDENTIFY THE LANDMARK</Text>
+      <Text style={styles.artTxt}>What is landmark #1 on this bone?</Text>
+      <View style={{ marginTop: 12, gap: 8 }}>
+        {opts.map(opt => {
+          const isC = opt === correct, chosen = answered === opt, rev = !!answered;
+          return (
+            <TouchableOpacity
+              key={opt}
+              onPress={() => !answered && setAnswered(opt)}
+              style={[styles.quizOpt,
+                rev && isC   && styles.quizOptOk,
+                rev && chosen && !isC && styles.quizOptBad,
+              ]}
+            >
+              <Text style={[styles.quizOptTxt, rev && isC && { color: "#fff" }]}>{opt}</Text>
+              {rev && isC   && <Ionicons name="checkmark-circle" size={16} color="#68D391" />}
+              {rev && chosen && !isC && <Ionicons name="close-circle" size={16} color="#FC8181" />}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </ScrollView>
   );
 }
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function OsteologyScreen() {
+  const insets = useSafeAreaInsets();
   const viewerRef = useRef<SkeletonViewerRef>(null);
-  const [selectedBone, setSelectedBone] = useState<BoneInfo | null>(null);
-  const [activeTab, setActiveTab] = useState<TabKey>("overview");
-  const [xray, setXray] = useState(false);
-  const [markers, setMarkers] = useState(false);
-  const [insertions, setInsertions] = useState(false);
-  const [showPanel, setShowPanel] = useState(false);
+  const [selectedBone, setSelectedBone]   = useState<BoneInfo | null>(null);
+  const [activeTab, setActiveTab]         = useState<TabKey>("overview");
+  const [activeSystem, setActiveSystem]   = useState("skeletal");
+  const panelAnim = useRef(new Animated.Value(0)).current;
 
   function handleBoneSelect(bone: BoneInfo | null) {
     setSelectedBone(bone);
     setActiveTab("overview");
-    setShowPanel(!!bone);
+    Animated.spring(panelAnim, {
+      toValue: bone ? 1 : 0,
+      useNativeDriver: true,
+      tension: 65,
+      friction: 11,
+    }).start();
   }
 
-  const ST = StatusBar.currentHeight ?? 0;
+  const panelY = panelAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [340, 0],
+  });
 
   return (
     <View style={styles.root}>
-      {/* ── Full-screen 3D Skeleton ── */}
+
+      {/* ── Full-screen skeleton canvas ── */}
       <SkeletonViewer ref={viewerRef} onBoneSelect={handleBoneSelect} />
 
-      {/* ── Left sidebar ── */}
-      <View style={[styles.leftBar, { top: ST + 8 }]}>
-        <TouchableOpacity style={styles.leftBtn}>
-          <Ionicons name="book-outline" size={20} color="#e2e8f0" />
+      {/* ── Top header ── */}
+      <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
+        <TouchableOpacity style={styles.headerBtn} onPress={() => { viewerRef.current?.resetView(); }}>
+          <Ionicons name="chevron-back" size={20} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.leftBtn}>
-          <Ionicons name="document-text-outline" size={20} color="#e2e8f0" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.leftBtn}>
-          <Ionicons name="star" size={20} color="#facc15" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.leftBtn}>
-          <Ionicons name="ellipsis-vertical" size={20} color="#e2e8f0" />
-        </TouchableOpacity>
-      </View>
 
-      {/* ── Top toolbar ── */}
-      <View style={[styles.topBar, { top: ST + 8 }]}>
-        <View style={styles.topLeft}>
-          <TouchableOpacity style={styles.topBtn} onPress={() => viewerRef.current?.resetView()}>
-            <Ionicons name="arrow-back" size={18} color="#e2e8f0" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.topBtn}>
-            <Ionicons name="arrow-forward" size={18} color="#e2e8f0" />
-          </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          {selectedBone ? (
+            <>
+              <Text style={styles.headerTitle}>{selectedBone.name}</Text>
+              <Text style={styles.headerSub}>{selectedBone.latinName}</Text>
+            </>
+          ) : (
+            <Text style={styles.headerTitle}>Human Skeleton</Text>
+          )}
         </View>
-        <View style={styles.topRight}>
-          <TouchableOpacity style={styles.topBtn}>
-            <Ionicons name="pencil-outline" size={18} color="#e2e8f0" />
+
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={styles.headerBtn}>
+            <Ionicons name="search-outline" size={18} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.topBtn}>
-            <Ionicons name="camera-outline" size={18} color="#e2e8f0" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.topBtn}>
-            <Ionicons name="add-circle-outline" size={18} color="#e2e8f0" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.topBtn}>
-            <Ionicons name="remove-circle-outline" size={18} color="#e2e8f0" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.topBtn}>
-            <Ionicons name="settings-outline" size={18} color="#e2e8f0" />
+          <TouchableOpacity style={styles.headerBtn}>
+            <Ionicons name="ellipsis-horizontal" size={18} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* ── Bone name label (when selected) ── */}
-      {selectedBone && (
-        <View style={styles.boneLabel} pointerEvents="none">
-          <Text style={styles.boneLabelName}>{selectedBone.name}</Text>
-          <Text style={styles.boneLabelLatin}>{selectedBone.latinName}</Text>
-        </View>
-      )}
+      {/* ── System selector ── */}
+      <View style={[styles.systemRow, { top: insets.top + 64 }]}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.systemScroll}>
+          {SYSTEMS.map(s => {
+            const active = activeSystem === s.key;
+            return (
+              <TouchableOpacity
+                key={s.key}
+                style={[styles.systemPill, active && styles.systemPillActive]}
+                onPress={() => setActiveSystem(s.key)}
+              >
+                <Ionicons name={s.icon} size={13} color={active ? "#fff" : "#6B7280"} />
+                <Text style={[styles.systemLabel, active && styles.systemLabelActive]}>{s.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
-      {/* ── Bottom action bar ── */}
-      <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.bottomBtn} onPress={() => { setSelectedBone(null); setShowPanel(false); }}>
-          <Ionicons name="trash-outline" size={20} color="#94a3b8" />
-          <Text style={styles.bottomBtnTxt}>Delete</Text>
+      {/* ── Floating right controls ── */}
+      <View style={[styles.floatRight, { top: insets.top + 120 }]}>
+        <TouchableOpacity style={styles.floatBtn} onPress={() => viewerRef.current?.resetView()}>
+          <Ionicons name="refresh-outline" size={18} color="#D1D5DB" />
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.bottomBtn, xray && styles.bottomBtnOn]} onPress={() => setXray(v => !v)}>
-          <Ionicons name="eye-outline" size={20} color={xray ? "#a5b4fc" : "#94a3b8"} />
-          <Text style={[styles.bottomBtnTxt, xray && { color: "#a5b4fc" }]}>X-Ray</Text>
+        <TouchableOpacity style={styles.floatBtn}>
+          <Ionicons name="add-outline" size={20} color="#D1D5DB" />
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.bottomBtn, markers && styles.bottomBtnOn]} onPress={() => setMarkers(v => !v)}>
-          <Ionicons name="location-outline" size={20} color={markers ? "#a5b4fc" : "#94a3b8"} />
-          <Text style={[styles.bottomBtnTxt, markers && { color: "#a5b4fc" }]}>Markers</Text>
+        <TouchableOpacity style={styles.floatBtn}>
+          <Ionicons name="remove-outline" size={20} color="#D1D5DB" />
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.bottomBtn, insertions && styles.bottomBtnOn]} onPress={() => setInsertions(v => !v)}>
-          <Ionicons name="color-palette-outline" size={20} color={insertions ? "#a5b4fc" : "#94a3b8"} />
-          <Text style={[styles.bottomBtnTxt, insertions && { color: "#a5b4fc" }]}>Insertions</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.bottomBtn}>
-          <Ionicons name="book-outline" size={20} color="#94a3b8" />
-          <Text style={styles.bottomBtnTxt}>More</Text>
+        <TouchableOpacity style={styles.floatBtn}>
+          <Ionicons name="layers-outline" size={17} color="#D1D5DB" />
         </TouchableOpacity>
       </View>
 
-      {/* ── Bone detail panel (slides up when bone selected) ── */}
-      {selectedBone && showPanel && (
-        <View style={styles.detailPanel}>
-          {/* Dismiss handle */}
-          <TouchableOpacity style={styles.panelHandle} onPress={() => setShowPanel(false)}>
-            <View style={styles.handleBar} />
-          </TouchableOpacity>
-
-          {/* Tab strip */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabStrip}
-          >
-            {TABS.map(t => (
-              <TabCard
-                key={t.key}
-                tab={t}
-                active={activeTab === t.key}
-                bone={selectedBone}
-                onPress={() => setActiveTab(t.key)}
-              />
-            ))}
-          </ScrollView>
-
-          {/* Content */}
-          <View style={{ flex: 1 }}>
-            {activeTab === "overview"     && <OverviewPanel     info={selectedBone} />}
-            {activeTab === "bonymarkings" && <BonyMarkingsPanel info={selectedBone} />}
-            {activeTab === "quiz1"        && <QuizPanel         info={selectedBone} num={1} />}
-            {activeTab === "quiz2"        && <QuizPanel         info={selectedBone} num={2} />}
+      {/* ── "Tap a bone" hint (when nothing selected) ── */}
+      {!selectedBone && (
+        <View style={styles.hintWrap} pointerEvents="none">
+          <View style={styles.hintPill}>
+            <Ionicons name="hand-left-outline" size={13} color="#9CA3AF" />
+            <Text style={styles.hintTxt}>Tap a bone to explore</Text>
           </View>
         </View>
       )}
 
-      {/* ── Tap-to-open indicator (when bone selected but panel closed) ── */}
-      {selectedBone && !showPanel && (
-        <TouchableOpacity style={styles.openPanelBtn} onPress={() => setShowPanel(true)}>
-          <Ionicons name="chevron-up" size={16} color="#fff" />
-          <Text style={styles.openPanelTxt}>View details</Text>
-        </TouchableOpacity>
+      {/* ── Bone detail panel ── */}
+      {selectedBone && (
+        <Animated.View
+          style={[styles.panel, { transform: [{ translateY: panelY }], paddingBottom: insets.bottom + 8 }]}
+        >
+          {/* Handle */}
+          <TouchableOpacity
+            style={styles.handleWrap}
+            onPress={() => handleBoneSelect(null)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.handle} />
+          </TouchableOpacity>
+
+          {/* Bone header */}
+          <View style={styles.panelHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.panelBoneName}>{selectedBone.name}</Text>
+              <Text style={styles.panelBoneLatin}>{selectedBone.latinName}</Text>
+            </View>
+            <View style={[styles.regionBadge]}>
+              <Text style={styles.regionBadgeTxt}>{selectedBone.region.replace("-", " ")}</Text>
+            </View>
+          </View>
+
+          {/* Tabs */}
+          <View style={styles.tabRow}>
+            {TABS.map(t => (
+              <TouchableOpacity
+                key={t.key}
+                style={[styles.tab, activeTab === t.key && styles.tabActive]}
+                onPress={() => setActiveTab(t.key as TabKey)}
+              >
+                <Text style={[styles.tabTxt, activeTab === t.key && styles.tabTxtActive]}>
+                  {t.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Content */}
+          <View style={styles.panelBody}>
+            {activeTab === "overview"     && <OverviewPanel     info={selectedBone} />}
+            {activeTab === "bonymarkings" && <BonyMarkingsPanel info={selectedBone} />}
+            {activeTab === "quiz1"        && <QuizPanel         info={selectedBone} />}
+          </View>
+        </Animated.View>
       )}
     </View>
   );
@@ -280,111 +286,152 @@ export default function OsteologyScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#1e1e2e" },
+  root: { flex: 1, backgroundColor: "#000" },
 
-  // Left sidebar
-  leftBar: {
-    position: "absolute", left: 10,
-    gap: 6,
+  // Header
+  header: {
+    position: "absolute", top: 0, left: 0, right: 0,
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 8, paddingBottom: 8,
+    gap: 4,
   },
-  leftBtn: {
-    width: 38, height: 38, borderRadius: 10,
-    backgroundColor: "rgba(0,0,0,0.45)",
+  headerBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.08)",
     alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
   },
+  headerCenter: { flex: 1, alignItems: "center" },
+  headerTitle:  { fontSize: 15, fontWeight: "700", color: "#FFFFFF", letterSpacing: 0.2 },
+  headerSub:    { fontSize: 11, color: "#6B7280", marginTop: 1 },
+  headerRight:  { flexDirection: "row", gap: 4 },
 
-  // Top bar
-  topBar: {
-    position: "absolute", left: 60, right: 10,
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+  // System selector
+  systemRow: {
+    position: "absolute", left: 0, right: 0,
   },
-  topLeft:  { flexDirection: "row", gap: 4 },
-  topRight: { flexDirection: "row", gap: 4 },
-  topBtn: {
-    width: 36, height: 36, borderRadius: 9,
-    backgroundColor: "rgba(0,0,0,0.45)",
+  systemScroll: { paddingHorizontal: 12, gap: 6 },
+  systemPill: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 11, paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
+  },
+  systemPillActive: {
+    backgroundColor: "#1D4ED8",
+    borderColor: "#3B82F6",
+  },
+  systemLabel:       { fontSize: 12, color: "#6B7280", fontWeight: "500" },
+  systemLabelActive: { color: "#fff", fontWeight: "600" },
+
+  // Floating right controls
+  floatRight: {
+    position: "absolute", right: 12,
+    gap: 8, alignItems: "center",
+  },
+  floatBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
     alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
   },
 
-  // Bone name label
-  boneLabel: {
-    position: "absolute", bottom: 160, left: 0, right: 0,
+  // Hint
+  hintWrap: {
+    position: "absolute", bottom: 40, left: 0, right: 0,
     alignItems: "center",
   },
-  boneLabelName:  { fontSize: 22, fontWeight: "700", color: "#ffffff" },
-  boneLabelLatin: { fontSize: 13, color: "#94a3b8", marginTop: 2 },
-
-  // Bottom action bar
-  bottomBar: {
-    position: "absolute", bottom: 0, left: 0, right: 0,
-    flexDirection: "row",
-    backgroundColor: "rgba(15,15,30,0.92)",
-    paddingVertical: 10, paddingBottom: 22,
-    borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)",
+  hintPill: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
   },
-  bottomBtn:    { flex: 1, alignItems: "center", gap: 4 },
-  bottomBtnOn:  { },
-  bottomBtnTxt: { fontSize: 10, color: "#64748b", fontWeight: "500" },
+  hintTxt: { fontSize: 13, color: "#6B7280" },
 
   // Detail panel
-  detailPanel: {
-    position: "absolute", bottom: 70, left: 0, right: 0,
-    height: 300,
-    backgroundColor: "rgba(15,15,30,0.96)",
-    borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.1)",
+  panel: {
+    position: "absolute", bottom: 0, left: 0, right: 0,
+    height: 320,
+    backgroundColor: "#111111",
+    borderTopLeftRadius: 22, borderTopRightRadius: 22,
+    borderTopWidth: 1, borderColor: "rgba(255,255,255,0.08)",
+    shadowColor: "#000", shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.5, shadowRadius: 16, elevation: 24,
   },
-  panelHandle: { alignItems: "center", paddingVertical: 8 },
-  handleBar:   { width: 36, height: 4, borderRadius: 2, backgroundColor: "#334155" },
+  handleWrap: { alignItems: "center", paddingVertical: 10 },
+  handle: {
+    width: 36, height: 4, borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.15)",
+  },
 
-  // Tab strip
-  tabStrip: { paddingHorizontal: 14, gap: 10, paddingBottom: 8 },
-  tabCard:   {
-    width: 80, alignItems: "center", gap: 6,
-    opacity: 0.65,
+  panelHeader: {
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 18, paddingBottom: 10,
   },
-  tabCardActive: { opacity: 1 },
-  tabThumb:  {
-    width: 72, height: 56, borderRadius: 10,
-    alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
+  panelBoneName:  { fontSize: 20, fontWeight: "700", color: "#FFFFFF" },
+  panelBoneLatin: { fontSize: 12, color: "#6B7280", marginTop: 2 },
+  regionBadge: {
+    backgroundColor: "rgba(59,130,246,0.15)",
+    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4,
+    borderWidth: 1, borderColor: "rgba(59,130,246,0.3)",
   },
-  tabLabel:       { fontSize: 10, color: "#94a3b8", textAlign: "center" },
-  tabLabelActive: { color: "#ff8800", fontWeight: "600" },
+  regionBadgeTxt: {
+    fontSize: 10, fontWeight: "600", color: "#60A5FA",
+    textTransform: "capitalize",
+  },
 
-  // Panel content
-  panelContent: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 12 },
-  panelTitle:   { fontSize: 17, fontWeight: "700", color: "#f1f5f9", marginBottom: 2 },
-  panelSub:     { fontSize: 12, color: "#64748b", marginBottom: 10 },
-  panelBodyLabel: { fontSize: 11, fontWeight: "700", color: "#6366f1", textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6, marginTop: 8 },
-  panelBodyTxt:   { fontSize: 13, color: "#94a3b8", lineHeight: 19, marginBottom: 4 },
+  // Tabs
+  tabRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.07)",
+    marginHorizontal: 18, marginBottom: 0,
+  },
+  tab: {
+    paddingVertical: 8, paddingHorizontal: 14,
+    borderBottomWidth: 2, borderBottomColor: "transparent",
+    marginBottom: -1,
+  },
+  tabActive: { borderBottomColor: "#3B82F6" },
+  tabTxt:   { fontSize: 13, color: "#6B7280", fontWeight: "500" },
+  tabTxtActive: { color: "#60A5FA", fontWeight: "600" },
+
+  panelBody: { flex: 1 },
+  panelScroll: { paddingHorizontal: 18, paddingTop: 12, paddingBottom: 16 },
+
+  sectionLabel: {
+    fontSize: 10, fontWeight: "700", color: "#4B5563",
+    letterSpacing: 1.2, marginBottom: 10,
+  },
+
+  artRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 8 },
+  artDot: {
+    width: 5, height: 5, borderRadius: 3,
+    backgroundColor: "#3B82F6", marginTop: 5, flexShrink: 0,
+  },
+  artTxt:     { fontSize: 13, color: "#D1D5DB", lineHeight: 20, flex: 1 },
+  clinicalTxt:{ fontSize: 13, color: "#D1D5DB", lineHeight: 20 },
 
   // Bony markings
-  markRow:    { flexDirection: "row", gap: 10, marginBottom: 8, alignItems: "flex-start" },
-  markNum:    { width: 22, height: 22, borderRadius: 11, backgroundColor: "#312e81", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 },
-  markNumTxt: { fontSize: 10, fontWeight: "700", color: "#a5b4fc" },
-  markName:   { fontSize: 13, fontWeight: "600", color: "#e2e8f0" },
-  markDesc:   { fontSize: 11, color: "#64748b", lineHeight: 16, marginTop: 1 },
+  markRow:    { flexDirection: "row", gap: 10, marginBottom: 10, alignItems: "flex-start" },
+  markIdx:    {
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: "rgba(59,130,246,0.2)",
+    alignItems: "center", justifyContent: "center",
+    flexShrink: 0, marginTop: 1,
+  },
+  markIdxTxt: { fontSize: 10, fontWeight: "700", color: "#60A5FA" },
+  markName:   { fontSize: 13, fontWeight: "600", color: "#E5E7EB" },
+  markDesc:   { fontSize: 11, color: "#6B7280", lineHeight: 16, marginTop: 2 },
 
   // Quiz
-  quizOpt:    {
+  quizOpt: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    backgroundColor: "#1e293b", borderRadius: 10, padding: 12, marginBottom: 7,
-    borderWidth: 1, borderColor: "#334155",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 10, padding: 12,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
   },
-  quizOptOk:  { backgroundColor: "#14532d", borderColor: "#22c55e" },
-  quizOptBad: { backgroundColor: "#450a0a", borderColor: "#ef4444" },
-  quizOptTxt: { fontSize: 13, color: "#cbd5e1", flex: 1 },
-
-  // Open panel button
-  openPanelBtn: {
-    position: "absolute", bottom: 80,
-    alignSelf: "center",
-    flexDirection: "row", alignItems: "center", gap: 5,
-    backgroundColor: "rgba(99,102,241,0.85)",
-    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
-  },
-  openPanelTxt: { color: "#fff", fontSize: 13, fontWeight: "600" },
+  quizOptOk:  { backgroundColor: "rgba(34,197,94,0.12)", borderColor: "#22C55E" },
+  quizOptBad: { backgroundColor: "rgba(239,68,68,0.12)",  borderColor: "#EF4444" },
+  quizOptTxt: { fontSize: 13, color: "#D1D5DB", flex: 1 },
 });
