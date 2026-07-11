@@ -65,18 +65,7 @@ function ClassicTabLayout() {
             ),
         }}
       />
-      <Tabs.Screen
-        name="bookmarks"
-        options={{
-          title: "Saved",
-          tabBarIcon: ({ color, size }) =>
-            isIOS ? (
-              <SymbolView name="bookmark" tintColor={color} size={size} />
-            ) : (
-              <Feather name="bookmark" size={size} color={color} />
-            ),
-        }}
-      />
+      <Tabs.Screen name="bookmarks" options={{ href: null }} />
       <Tabs.Screen
         name="leaderboard"
         options={{
