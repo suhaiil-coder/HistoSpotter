@@ -1,244 +1,87 @@
-import { Feather } from "@expo/vector-icons";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import React from "react";
 import {
-  Animated,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
 
-const DRAWER_WIDTH = 288;
-
 // ─── Menu data ────────────────────────────────────────────────────────────────
 
-interface SubItem {
+interface MenuItem {
   id: string;
   label: string;
+  sub?: string;
   icon: keyof typeof Feather.glyphMap;
-  isDivider?: boolean;
-  isChart?: boolean;
+  accent?: string;
+  available?: boolean;
 }
 
-interface Section {
-  id: string;
-  label: string;
-  icon: keyof typeof Feather.glyphMap;
-  expandable?: boolean;
-  accent?: boolean;
-  children?: SubItem[];
-}
-
-const SECTIONS: Section[] = [
-  {
-    id: "gross-anatomy",
-    label: "Gross Anatomy",
-    icon: "layers",
-    expandable: true,
-    children: [
-      { id: "head-neck", label: "Head & Neck", icon: "user" },
-      { id: "upper-limb", label: "Upper Limb", icon: "arrow-up" },
-      { id: "lower-limb", label: "Lower Limb", icon: "arrow-down" },
-      { id: "thorax", label: "Thorax", icon: "heart" },
-      { id: "abdomen", label: "Abdomen", icon: "circle" },
-      { id: "neuroanatomy-sub", label: "Neuroanatomy", icon: "cpu" },
-      { id: "divider-1", label: "", icon: "minus", isDivider: true },
-      { id: "charts-quiz", label: "Quiz", icon: "book-open" },
-    ],
-  },
-  { id: "neuroanatomy", label: "Neuroanatomy", icon: "cpu" },
-  { id: "embryology", label: "Embryology", icon: "git-branch" },
-  { id: "osteology", label: "Osteology", icon: "box" },
-  { id: "radiology", label: "Radiology", icon: "aperture" },
-  {
-    id: "ospe",
-    label: "OSPE Exam Mode",
-    icon: "clipboard",
-    accent: true,
-  },
+const MENU_ITEMS: MenuItem[] = [
+  { id: "head-neck",    label: "Head & Neck",      sub: "30 spotters",  icon: "user",       accent: "#0EA5E9", available: true  },
+  { id: "upper-limb",  label: "Upper Limb",        sub: "31 spotters",  icon: "arrow-up",   accent: "#10B981", available: true  },
+  { id: "thorax",      label: "Thorax",            sub: "29 spotters",  icon: "heart",      accent: "#F59E0B", available: true  },
+  { id: "abdomen",     label: "Abdomen & Pelvis",  sub: "60 spotters",  icon: "circle",     accent: "#EF4444", available: true  },
+  { id: "neuroanatomy",label: "Neuroanatomy",      sub: "Coming soon",  icon: "cpu",        accent: "#8B5CF6", available: false },
+  { id: "embryology",  label: "Embryology",        sub: "Coming soon",  icon: "git-branch", accent: "#EC4899", available: false },
+  { id: "osteology",   label: "Osteology",         sub: "Coming soon",  icon: "box",        accent: "#6366F1", available: false },
 ];
 
-// ─── Sub-item row ─────────────────────────────────────────────────────────────
+// ─── Menu item row ────────────────────────────────────────────────────────────
 
-function SubItemRow({
+function MenuRow({
   item,
   onPress,
-  active,
 }: {
-  item: SubItem;
+  item: MenuItem;
   onPress: (id: string) => void;
-  active: boolean;
 }) {
   const colors = useColors();
-
-  if (item.isDivider) {
-    return (
-      <View style={styles.subDivider}>
-        <View style={[styles.subDividerLine, { backgroundColor: colors.border }]} />
-        <Text style={[styles.subDividerLabel, { color: colors.mutedForeground }]}>
-          Charts
-        </Text>
-        <View style={[styles.subDividerLine, { backgroundColor: colors.border }]} />
-      </View>
-    );
-  }
+  const accent = item.accent ?? colors.primary;
+  const dim = !item.available;
 
   return (
     <Pressable
+      onPress={dim ? undefined : () => onPress(item.id)}
       style={({ pressed }) => [
-        styles.subRow,
-        active && { backgroundColor: colors.primary + "22" },
-        pressed && { backgroundColor: colors.primary + "15" },
+        styles.menuRow,
+        { backgroundColor: colors.card, borderColor: colors.border },
+        !dim && pressed && { backgroundColor: accent + "22", borderColor: accent + "55" },
+        dim && { opacity: 0.4 },
       ]}
-      onPress={() => onPress(item.id)}
     >
-      <View style={[styles.subDot, { backgroundColor: active ? colors.primary : colors.border }]} />
-      <Text
-        style={[
-          styles.subLabel,
-          { color: active ? colors.primary : colors.foreground },
-          item.isChart && { color: colors.primary },
-        ]}
-      >
-        {item.label}
-      </Text>
-      {item.isChart && (
-        <View style={[styles.chartBadge, { backgroundColor: colors.primary + "22" }]}>
-          <Text style={[styles.chartBadgeTxt, { color: colors.primary }]}>Charts</Text>
+      <View style={[styles.menuIcon, { backgroundColor: accent + "22" }]}>
+        <Feather name={item.icon} size={18} color={accent} />
+      </View>
+
+      <View style={styles.menuText}>
+        <Text style={[styles.menuLabel, { color: colors.foreground }]}>
+          {item.label}
+        </Text>
+        <Text style={[styles.menuSub, { color: colors.mutedForeground }]}>
+          {item.sub}
+        </Text>
+      </View>
+
+      {item.available ? (
+        <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+      ) : (
+        <View style={[styles.soonBadge, { backgroundColor: colors.secondary }]}>
+          <Text style={[styles.soonTxt, { color: colors.mutedForeground }]}>Soon</Text>
         </View>
       )}
     </Pressable>
   );
 }
 
-// ─── Section row ──────────────────────────────────────────────────────────────
-
-function SectionRow({
-  section,
-  activeId,
-  onSelect,
-}: {
-  section: Section;
-  activeId: string;
-  onSelect: (id: string) => void;
-}) {
-  const colors = useColors();
-  const [expanded, setExpanded] = useState(false);
-  const expandAnim = useRef(new Animated.Value(0)).current;
-
-  const childCount = (section.children ?? []).filter((c) => !c.isDivider).length;
-  const totalHeight = (section.children ?? []).reduce((h, c) => h + (c.isDivider ? 28 : 44), 0);
-
-  const toggle = useCallback(() => {
-    const toValue = expanded ? 0 : 1;
-    setExpanded(!expanded);
-    Animated.spring(expandAnim, {
-      toValue,
-      useNativeDriver: false, // height animation never uses native driver
-      damping: 18,
-      stiffness: 180,
-    }).start();
-  }, [expanded, expandAnim]);
-
-  const isActive = activeId === section.id;
-  const isAccent = section.accent;
-
-  const rowColor = isAccent
-    ? colors.primary
-    : isActive
-      ? colors.primary
-      : colors.foreground;
-  const rowBg = isAccent
-    ? colors.primary + "22"
-    : isActive
-      ? colors.primary + "18"
-      : "transparent";
-
-  return (
-    <View>
-      <Pressable
-        style={({ pressed }) => [
-          styles.sectionRow,
-          { backgroundColor: rowBg },
-          pressed && !section.expandable && { backgroundColor: colors.primary + "15" },
-        ]}
-        onPress={() => {
-          if (section.expandable) {
-            toggle();
-          } else {
-            onSelect(section.id);
-          }
-        }}
-      >
-        <View style={[styles.sectionIcon, { backgroundColor: rowColor + "22" }]}>
-          <Feather name={section.icon} size={16} color={rowColor} />
-        </View>
-        <Text
-          style={[
-            styles.sectionLabel,
-            { color: rowColor },
-            isAccent && { fontFamily: "Inter_700Bold" },
-          ]}
-        >
-          {section.label}
-        </Text>
-        {section.expandable && (
-          <Animated.View
-            style={{
-              transform: [
-                {
-                  rotate: expandAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ["0deg", "90deg"],
-                  }),
-                },
-              ],
-            }}
-          >
-            <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
-          </Animated.View>
-        )}
-        {section.expandable && (
-          <Text style={[styles.countBadge, { color: colors.mutedForeground }]}>
-            {childCount}
-          </Text>
-        )}
-      </Pressable>
-
-      {/* Expandable children */}
-      {section.expandable && section.children && (
-        <Animated.View
-          style={{
-            height: expandAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, totalHeight],
-            }),
-            overflow: "hidden",
-          }}
-        >
-          <View style={[styles.childrenWrap, { borderLeftColor: colors.border }]}>
-            {section.children.map((child) => (
-              <SubItemRow
-                key={child.id}
-                item={child}
-                active={activeId === child.id}
-                onPress={onSelect}
-              />
-            ))}
-          </View>
-        </Animated.View>
-      )}
-    </View>
-  );
-}
-
-// ─── Drawer ───────────────────────────────────────────────────────────────────
+// ─── Bottom sheet ─────────────────────────────────────────────────────────────
 
 interface DrawerMenuProps {
   isOpen: boolean;
@@ -249,257 +92,190 @@ interface DrawerMenuProps {
 export default function DrawerMenu({ isOpen, onClose, onSelect }: DrawerMenuProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const topInset = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
-  const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
-  const backdropAnim = useRef(new Animated.Value(0)).current;
-  const [visible, setVisible] = useState(false);
-  const [activeId, setActiveId] = useState("gross-anatomy");
-
-  useEffect(() => {
-    const native = Platform.OS !== "web";
-    if (isOpen) {
-      setVisible(true);
-      Animated.parallel([
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          useNativeDriver: native,
-          damping: 20,
-          stiffness: 200,
-        }),
-        Animated.timing(backdropAnim, {
-          toValue: 1,
-          duration: 220,
-          useNativeDriver: native,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.spring(slideAnim, {
-          toValue: -DRAWER_WIDTH,
-          useNativeDriver: native,
-          damping: 22,
-          stiffness: 220,
-        }),
-        Animated.timing(backdropAnim, {
-          toValue: 0,
-          duration: 180,
-          useNativeDriver: native,
-        }),
-      ]).start(() => setVisible(false));
-    }
-  }, [isOpen, slideAnim, backdropAnim]);
-
-  const handleSelect = useCallback(
-    (id: string) => {
-      setActiveId(id);
-      onSelect?.(id);
-      onClose();
-    },
-    [onClose, onSelect]
-  );
-
-  if (!visible) return null;
+  function handleSelect(id: string) {
+    onSelect?.(id);
+    onClose();
+  }
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      {/* Backdrop */}
-      <TouchableWithoutFeedback onPress={onClose}>
-        <Animated.View
-          style={[
-            StyleSheet.absoluteFill,
-            styles.backdrop,
-            { opacity: backdropAnim },
-          ]}
-        />
-      </TouchableWithoutFeedback>
+    <Modal
+      visible={isOpen}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      {/* Backdrop tap-to-close */}
+      <Pressable style={styles.backdrop} onPress={onClose} />
 
-      {/* Drawer panel */}
-      <Animated.View
+      {/* Sheet */}
+      <View
         style={[
-          styles.drawer,
+          styles.sheet,
           {
-            backgroundColor: colors.card,
-            borderRightColor: colors.border,
-            paddingTop: topInset,
-            transform: [{ translateX: slideAnim }],
+            backgroundColor: colors.background,
+            borderColor: colors.border,
+            paddingBottom: Platform.OS === "web" ? 24 : insets.bottom + 12,
           },
         ]}
       >
+        {/* Handle bar */}
+        <View style={[styles.handle, { backgroundColor: colors.border }]} />
+
         {/* Header */}
-        <View style={[styles.drawerHeader, { borderBottomColor: colors.border }]}>
-          <View>
-            <Text style={[styles.drawerTitle, { color: colors.foreground }]}>
-              Histo<Text style={{ color: colors.primary }}>Spotter</Text>
-            </Text>
-            <Text style={[styles.drawerSub, { color: colors.mutedForeground }]}>
+        <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
+          <View style={styles.sheetTitleRow}>
+            <MaterialCommunityIcons name="microscope" size={20} color={colors.primary} />
+            <Text style={[styles.sheetTitle, { color: colors.foreground }]}>
               Study Navigator
             </Text>
           </View>
           <Pressable
             onPress={onClose}
-            style={[styles.closeBtn, { backgroundColor: colors.secondary }]}
+            style={[styles.closeBtn, { backgroundColor: colors.card }]}
+            hitSlop={8}
           >
-            <Feather name="x" size={18} color={colors.foreground} />
+            <Feather name="x" size={16} color={colors.foreground} />
           </Pressable>
         </View>
 
-        {/* Sections */}
+        {/* Items */}
         <ScrollView
-          style={styles.menuScroll}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+          contentContainerStyle={styles.listContent}
+          bounces={false}
         >
-          <Text style={[styles.menuGroupLabel, { color: colors.mutedForeground }]}>
-            ANATOMY
+          <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>
+            ANATOMY SECTIONS
           </Text>
-          {SECTIONS.slice(0, 5).map((s) => (
-            <SectionRow
-              key={s.id}
-              section={s}
-              activeId={activeId}
-              onSelect={handleSelect}
-            />
+
+          {MENU_ITEMS.map((item) => (
+            <MenuRow key={item.id} item={item} onPress={handleSelect} />
           ))}
 
-          <View style={[styles.groupDivider, { backgroundColor: colors.border }]} />
-          <Text style={[styles.menuGroupLabel, { color: colors.mutedForeground }]}>
+          <Text style={[styles.groupLabel, { color: colors.mutedForeground, marginTop: 20 }]}>
             EXAM
           </Text>
-          {SECTIONS.slice(5).map((s) => (
-            <SectionRow
-              key={s.id}
-              section={s}
-              activeId={activeId}
-              onSelect={handleSelect}
-            />
-          ))}
+          <Pressable
+            onPress={() => handleSelect("ospe")}
+            style={({ pressed }) => [
+              styles.examRow,
+              { backgroundColor: colors.primary + "22", borderColor: colors.primary + "44" },
+              pressed && { opacity: 0.7 },
+            ]}
+          >
+            <Feather name="clipboard" size={18} color={colors.primary} />
+            <Text style={[styles.examLabel, { color: colors.primary }]}>
+              OSPE Exam Mode
+            </Text>
+            <Feather name="arrow-right" size={16} color={colors.primary} />
+          </Pressable>
         </ScrollView>
-      </Animated.View>
-    </View>
+      </View>
+    </Modal>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   backdrop: {
+    flex: 1,
     backgroundColor: "rgba(0,0,0,0.55)",
   },
-  drawer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    bottom: 0,
-    width: DRAWER_WIDTH,
+  sheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
     borderRightWidth: 1,
+    maxHeight: "80%",
     shadowColor: "#000",
-    shadowOffset: { width: 4, height: 0 },
+    shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
-    elevation: 16,
+    elevation: 20,
   },
-  drawerHeader: {
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  sheetHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
   },
-  drawerTitle: { fontSize: 20, fontFamily: "Inter_700Bold" },
-  drawerSub: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 1 },
+  sheetTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  sheetTitle: {
+    fontSize: 17,
+    fontFamily: "Inter_700Bold",
+  },
   closeBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
-
-  menuScroll: { flex: 1 },
-  menuGroupLabel: {
+  listContent: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    gap: 8,
+  },
+  groupLabel: {
     fontSize: 10,
     fontFamily: "Inter_600SemiBold",
     letterSpacing: 1.4,
-    marginTop: 20,
     marginBottom: 6,
-    marginHorizontal: 20,
+    marginLeft: 4,
   },
-  groupDivider: { height: 1, marginHorizontal: 20, marginTop: 16 },
-
-  // Section rows
-  sectionRow: {
+  menuRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    marginHorizontal: 8,
-    marginVertical: 1,
-    borderRadius: 12,
-    gap: 12,
+    gap: 14,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
   },
-  sectionIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
+  menuIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
-  sectionLabel: {
+  menuText: { flex: 1 },
+  menuLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  menuSub: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 1 },
+  soonBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  soonTxt: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
+  examRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  examLabel: {
     flex: 1,
     fontSize: 14,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Inter_700Bold",
   },
-  countBadge: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    marginRight: 4,
-  },
-
-  // Children
-  childrenWrap: {
-    marginLeft: 32,
-    marginRight: 8,
-    borderLeftWidth: 1.5,
-    paddingLeft: 12,
-    marginBottom: 4,
-  },
-  subRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    marginVertical: 1,
-    gap: 10,
-  },
-  subDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  subLabel: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-  },
-  chartBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  chartBadgeTxt: {
-    fontSize: 10,
-    fontFamily: "Inter_600SemiBold",
-  },
-
-  // Sub-divider (Charts separator)
-  subDivider: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-  },
-  subDividerLine: { flex: 1, height: 1 },
-  subDividerLabel: { fontSize: 10, fontFamily: "Inter_600SemiBold", letterSpacing: 1 },
 });
