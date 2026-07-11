@@ -59,7 +59,8 @@
   },
   "dependencies": {
     "@types/three": "^0.185.1",
+    "expo-asset": "~12.0.13",
     "expo-av": "15.0.2",
-    "three": "^0.185.1"
+    "react-native-webview": "^13.15.0"
   }
 }
