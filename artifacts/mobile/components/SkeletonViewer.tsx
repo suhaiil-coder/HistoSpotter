@@ -157,6 +157,11 @@ function makeHtml(glbUrl: string) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // NATIVE 3D — WebView + Three.js
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Module-level asset reference — Metro statically analyzes this and bundles the GLB.
+// Must be at top level, not inside any function or conditional.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const SKELETON_GLB = require("../assets/skeleton.glb");
+
 // Dynamic requires so the web bundle never touches these native-only modules
 const WebView    = IS_WEB ? null : require("react-native-webview").WebView;
 const AssetLib   = IS_WEB ? null : require("expo-asset");
@@ -183,9 +188,7 @@ function Viewer3D({
   useEffect(() => {
     (async () => {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const mod   = require("../assets/skeleton.glb");
-        const asset = await AssetLib.Asset.fromModule(mod).downloadAsync();
+        const asset = await AssetLib.Asset.fromModule(SKELETON_GLB).downloadAsync();
         const uri   = asset.localUri ?? asset.uri;
         if (!uri) throw new Error("No URI for skeleton asset");
         setGlbUri(uri);
