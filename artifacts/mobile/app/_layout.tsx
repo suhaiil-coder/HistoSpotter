@@ -59,6 +59,8 @@ function RootLayoutNav() {
         <Stack.Screen name="upper-limb-quiz" options={{ headerShown: false, animation: "slide_from_right" }} />
         <Stack.Screen name="thorax-quiz" options={{ headerShown: false, animation: "slide_from_right" }} />
         <Stack.Screen name="abdomen-quiz" options={{ headerShown: false, animation: "slide_from_right" }} />
+        <Stack.Screen name="ospe-quiz" options={{ headerShown: false, animation: "slide_from_right" }} />
+        <Stack.Screen name="neuro-quiz" options={{ headerShown: false, animation: "slide_from_right" }} />
       </Stack>
     </>
   );

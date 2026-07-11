@@ -29,7 +29,7 @@ const MENU_ITEMS: MenuItem[] = [
   { id: "upper-limb",  label: "Upper Limb",        sub: "31 spotters",  icon: "arrow-up",   accent: "#10B981", available: true  },
   { id: "thorax",      label: "Thorax",            sub: "29 spotters",  icon: "heart",      accent: "#F59E0B", available: true  },
   { id: "abdomen",     label: "Abdomen & Pelvis",  sub: "60 spotters",  icon: "circle",     accent: "#EF4444", available: true  },
-  { id: "neuroanatomy",label: "Neuroanatomy",      sub: "Coming soon",  icon: "cpu",        accent: "#8B5CF6", available: false },
+  { id: "neuroanatomy",label: "Neuroanatomy",      sub: "26 spotters",  icon: "cpu",        accent: "#8B5CF6", available: true  },
   { id: "embryology",  label: "Embryology",        sub: "Coming soon",  icon: "git-branch", accent: "#EC4899", available: false },
   { id: "osteology",   label: "Osteology",         sub: "Coming soon",  icon: "box",        accent: "#6366F1", available: false },
 ];

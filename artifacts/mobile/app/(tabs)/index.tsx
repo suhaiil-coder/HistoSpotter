@@ -98,10 +98,12 @@ const SUBJECTS: Subject[] = [
   {
     id: "neuroanatomy",
     title: "Neuroanatomy",
-    subtitle: "Coming soon",
+    subtitle: "Neuroanatomy · Spotters",
     color: "#8B5CF6",
     accent: "#A78BFA",
-    questionCount: 0,
+    questionCount: 26,
+    route: "/neuro-quiz",
+    isNew: true,
   },
   {
     id: "embryology",
@@ -641,6 +643,8 @@ export default function HomeScreen() {
             router.push("/abdomen-quiz");
           } else if (id === "ospe") {
             router.push("/ospe-quiz");
+          } else if (id === "neuroanatomy") {
+            router.push("/neuro-quiz");
           }
         }}
       />
