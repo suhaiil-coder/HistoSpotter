@@ -111,7 +111,8 @@ export default function NameEntryScreen() {
                   style={styles.inputIcon}
                 />
                 <TextInput
-                  style={[styles.input, { color: colors.foreground }]}
+                  style={[styles.input, { color: colors.foreground }, Platform.OS === "web" && ({ outline: "none" } as any)]}
+                  underlineColorAndroid="transparent"
                   placeholder="Your display name"
                   placeholderTextColor={colors.mutedForeground + "80"}
                   value={name}
